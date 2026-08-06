@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RaDuty.Api/RaDuty.Api.csproj" />
+    <Project Path="src/RaDuty.Application/RaDuty.Application.csproj" />
+    <Project Path="src/RaDuty.Domain/RaDuty.Domain.csproj" />
+    <Project Path="src/RaDuty.Infrastructure/RaDuty.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RaDuty.Tests/RaDuty.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,30 @@
+[
+  {
+    "sourceRow": 2,
+    "lastName": "Sample",
+    "firstName": "Alex",
+    "room": "ELTS-01A",
+    "activity": "Demo resident"
+  },
+  {
+    "sourceRow": 3,
+    "lastName": "Example",
+    "firstName": "Jamie",
+    "room": "ELTS-01B",
+    "activity": "Demo resident"
+  },
+  {
+    "sourceRow": 4,
+    "lastName": "Example",
+    "firstName": "Taylor",
+    "room": "ELTS-01B",
+    "activity": "Demo roommate"
+  },
+  {
+    "sourceRow": 5,
+    "lastName": "Demo",
+    "firstName": "Morgan",
+    "room": "ELTS-02C",
+    "activity": "Demo resident"
+  }
+]

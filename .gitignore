@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+.vs/
+.idea/
+.env
+.env.local
+*.user
+TestResults/
+coverage/
+**/App_Data/
+tmp/
+*.xlsx
+*.xls
