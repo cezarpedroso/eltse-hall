@@ -111,7 +111,7 @@ public sealed class AssignmentRuleTests
             SchedulePeriod = period, DutyDate = date ?? new DateOnly(2026, 8, 12),
             RequiredStaffCount = 1, StartsAt = DateTimeOffset.UtcNow, EndsAt = DateTimeOffset.UtcNow.AddHours(3)
         };
-        var user = new User { EntraObjectId = "test", SchoolEmail = "ra@example.edu", FirstName = "Test", LastName = "RA", IsActive = activeUser };
+        var user = new User { SchoolEmail = "ra@example.edu", FirstName = "Test", LastName = "RA", IsActive = activeUser };
         return new AssignmentRuleContext(period, shift, user, existing ?? [], active, weekend, capacity, duplicate);
     }
 }
@@ -166,10 +166,8 @@ public sealed class PersistenceAndPdfTests
 public sealed class AuthorizationPolicyTests
 {
     [Fact]
-    public void Approved_group_and_role_are_both_required()
+    public void Application_roles_are_matched_exactly()
     {
-        Assert.True(AuthorizationRules.IsApprovedGroupMember(["approved"], "approved"));
-        Assert.False(AuthorizationRules.IsApprovedGroupMember(["other"], "approved"));
         Assert.True(AuthorizationRules.IsInApplicationRole(["ResidentAssistant"], "ResidentAssistant", "HallDirector"));
         Assert.True(AuthorizationRules.IsInApplicationRole(["Admin"], "ResidentAssistant", "HallDirector", "Admin"));
         Assert.False(AuthorizationRules.IsInApplicationRole(["Student"], "ResidentAssistant", "HallDirector"));

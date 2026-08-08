@@ -3,9 +3,9 @@ export type ScheduleStatus = 'Draft' | 'OpenForSelection' | 'Closed' | 'Publishe
 export type ShiftStatus = 'Open' | 'Full' | 'Cancelled'
 
 export interface CurrentUser {
-  id: string; entraObjectId: string; schoolEmail: string; firstName: string; lastName: string
+  id: string; schoolEmail: string; firstName: string; lastName: string
   roomNumber?: string; phoneNumber?: string; role: HallRole; isActive: boolean
-  residenceHallId: string; residenceHallName: string
+  residenceHallId: string; residenceHallName: string; mustChangePassword?: boolean
 }
 
 export interface Assignment {
@@ -38,6 +38,9 @@ export interface ResidentAssistant {
   id: string; firstName: string; lastName: string; schoolEmail: string; roomNumber?: string
   phoneNumber?: string; role: HallRole; isActive: boolean; shiftCount: number
 }
+
+export interface ProvisionedAccount { user: ResidentAssistant; temporaryPassword: string }
+export interface TemporaryPassword { temporaryPassword: string }
 
 export interface Distribution {
   userId: string; name: string; totalShifts: number; weekendShifts: number; balance: string

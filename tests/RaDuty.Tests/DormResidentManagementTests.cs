@@ -15,14 +15,14 @@ public sealed class DormResidentManagementTests
         var hall = new ResidenceHall { Name = "Eltse Hall" };
         var ra = new User
         {
-            EntraObjectId = "dev-ra", SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
+            SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
             Role = HallRole.ResidentAssistant
         };
         var roomA = new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "A" };
         var roomB = new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "B" };
         db.AddRange(hall, ra, roomA, roomB);
         await db.SaveChangesAsync();
-        var current = new CurrentUserDto(ra.Id, ra.EntraObjectId, ra.SchoolEmail, ra.FirstName, ra.LastName,
+        var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
             null, null, ra.Role, true, hall.Id, hall.Name);
         var service = new DormResidentManagementService(db, new StubCurrentUserService(current));
 
@@ -51,7 +51,7 @@ public sealed class DormResidentManagementTests
         var hall = new ResidenceHall { Name = "Eltse Hall" };
         var ra = new User
         {
-            EntraObjectId = "dev-ra", SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
+            SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
             Role = HallRole.ResidentAssistant
         };
         var roomA = new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "A" };
@@ -61,7 +61,7 @@ public sealed class DormResidentManagementTests
         roomB.Residents.Add(new DormResident { FirstName = "Second", LastName = "Roommate" });
         db.AddRange(hall, ra, roomA, roomB, moving);
         await db.SaveChangesAsync();
-        var current = new CurrentUserDto(ra.Id, ra.EntraObjectId, ra.SchoolEmail, ra.FirstName, ra.LastName,
+        var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
             null, null, ra.Role, true, hall.Id, hall.Name);
         var service = new DormResidentManagementService(db, new StubCurrentUserService(current));
 

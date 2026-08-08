@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using RaDuty.Domain;
 
 namespace RaDuty.Infrastructure;
 
-public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options) : DbContext(options)
+public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
+    : IdentityUserContext<ApplicationAccount, Guid>(options)
 {
-    public DbSet<User> Users => Set<User>();
+    public DbSet<User> StaffUsers => Set<User>();
     public DbSet<ResidenceHall> ResidenceHalls => Set<ResidenceHall>();
     public DbSet<HallMembership> HallMemberships => Set<HallMembership>();
     public DbSet<SchedulePeriod> SchedulePeriods => Set<SchedulePeriod>();
@@ -19,10 +22,20 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options) :
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ApplicationAccount>(entity =>
+        {
+            entity.Property(x => x.MustChangePassword).HasDefaultValue(false);
+            entity.HasIndex(x => x.UserId).IsUnique();
+            entity.HasOne(x => x.User).WithOne().HasForeignKey<ApplicationAccount>(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasIndex(x => x.EntraObjectId).IsUnique();
-            entity.Property(x => x.EntraObjectId).HasMaxLength(64);
+            entity.ToTable("Users");
+            entity.HasIndex(x => x.SchoolEmail).IsUnique();
             entity.Property(x => x.SchoolEmail).HasMaxLength(254);
             entity.Property(x => x.FirstName).HasMaxLength(80);
             entity.Property(x => x.LastName).HasMaxLength(80);

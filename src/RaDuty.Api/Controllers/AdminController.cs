@@ -6,7 +6,7 @@ using RaDuty.Domain;
 namespace RaDuty.Api.Controllers;
 
 [ApiController, Route("api/admin"), Authorize(Policy = "HallDirectorOnly")]
-public sealed class AdminController(IScheduleService schedules, IUserService users) : ControllerBase
+public sealed class AdminController(IScheduleService schedules, IUserService users, IAccountService accounts) : ControllerBase
 {
     [HttpPost("schedules/{year:int}/{month:int}/generate")]
     public async Task<ActionResult<ScheduleDto>> Generate(int year, int month, GenerateScheduleRequest request, CancellationToken cancellationToken)
@@ -65,6 +65,18 @@ public sealed class AdminController(IScheduleService schedules, IUserService use
     [HttpGet("users")]
     public Task<IReadOnlyList<ResidentAssistantDto>> GetUsers([FromQuery] string? search, CancellationToken cancellationToken) =>
         users.GetUsersAsync(search, cancellationToken);
+
+    [HttpPost("users")]
+    public async Task<ActionResult<ProvisionedAccountDto>> CreateUser(CreateStaffAccountRequest request,
+        CancellationToken cancellationToken)
+    {
+        var account = await accounts.CreateAsync(request, cancellationToken);
+        return Created($"/api/admin/users/{account.User.Id}", account);
+    }
+
+    [HttpPost("users/{userId:guid}/reset-password")]
+    public Task<TemporaryPasswordDto> ResetPassword(Guid userId, CancellationToken cancellationToken) =>
+        accounts.ResetPasswordAsync(userId, cancellationToken);
 
     [HttpGet("audit-logs")]
     public Task<PagedResult<AuditLogDto>> AuditLogs([FromQuery] string? action, [FromQuery] int page = 1,

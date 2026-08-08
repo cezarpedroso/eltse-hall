@@ -7,7 +7,6 @@ public abstract class Entity
 
 public sealed class User : Entity
 {
-    public required string EntraObjectId { get; set; }
     public required string SchoolEmail { get; set; }
     public required string FirstName { get; set; }
     public required string LastName { get; set; }

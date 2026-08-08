@@ -200,7 +200,7 @@ public sealed class ScheduleService(RaDutyDbContext db, ICurrentUserService curr
         if (!string.IsNullOrWhiteSpace(action)) query = query.Where(x => x.Action.Contains(action.Trim()));
         var total = await query.CountAsync(cancellationToken);
         var raw = await query.OrderByDescending(x => x.OccurredAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
-        var users = await db.Users.AsNoTracking().Where(x => raw.Where(a => a.ActorUserId.HasValue).Select(a => a.ActorUserId!.Value).Contains(x.Id))
+        var users = await db.StaffUsers.AsNoTracking().Where(x => raw.Where(a => a.ActorUserId.HasValue).Select(a => a.ActorUserId!.Value).Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, x => x.FirstName + " " + x.LastName, cancellationToken);
         return new PagedResult<AuditLogDto>(raw.Select(x => new AuditLogDto(x.Id, x.OccurredAt,
             x.ActorUserId.HasValue && users.TryGetValue(x.ActorUserId.Value, out var name) ? name : "System",
@@ -222,7 +222,7 @@ public sealed class ScheduleService(RaDutyDbContext db, ICurrentUserService curr
                     .SingleOrDefaultAsync(x => x.Id == shiftId, cancellationToken)
                     ?? throw new AppException(404, "SHIFT_NOT_FOUND", "Shift not found.");
                 EnsureSameHall(shift.SchedulePeriod, current);
-                var user = await db.Users.SingleOrDefaultAsync(x => x.Id == userId, cancellationToken)
+                var user = await db.StaffUsers.SingleOrDefaultAsync(x => x.Id == userId, cancellationToken)
                     ?? throw new AppException(404, "USER_NOT_FOUND", "Resident assistant not found.");
                 var belongsToHall = await db.HallMemberships.AnyAsync(x => x.UserId == userId && x.ResidenceHallId == current.ResidenceHallId && x.IsActive, cancellationToken);
                 if (!belongsToHall) throw new AppException(404, "USER_NOT_FOUND", "Resident assistant not found in this hall.");

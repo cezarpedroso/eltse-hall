@@ -2,18 +2,29 @@ using RaDuty.Domain;
 
 namespace RaDuty.Application;
 
-public sealed record CurrentIdentity(string EntraObjectId, string Email, string FirstName, string LastName,
-    bool IsHallDirector, bool IsAdmin, IReadOnlyCollection<string> Groups);
+public sealed record CurrentIdentity(Guid UserId);
 
 public interface ICurrentIdentityAccessor
 {
     CurrentIdentity GetRequired();
 }
 
-public sealed record CurrentUserDto(Guid Id, string EntraObjectId, string SchoolEmail, string FirstName, string LastName,
-    string? RoomNumber, string? PhoneNumber, HallRole Role, bool IsActive, Guid ResidenceHallId, string ResidenceHallName);
+public sealed record CurrentUserDto(Guid Id, string SchoolEmail, string FirstName, string LastName,
+    string? RoomNumber, string? PhoneNumber, HallRole Role, bool IsActive, Guid ResidenceHallId,
+    string ResidenceHallName, bool MustChangePassword = false);
 
-public sealed record UpdateProfileRequest(string? RoomNumber, string? PhoneNumber);
+public sealed record LoginRequest(string Email, string Password, bool RememberMe = true);
+public sealed record LoginResult(bool MustChangePassword);
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public sealed record BootstrapAdminRequest(string Email, string FirstName, string LastName, string Password);
+public sealed record CreateStaffAccountRequest(string Email, string FirstName, string LastName, HallRole Role,
+    string? RoomNumber, string? PhoneNumber);
+public sealed record ProvisionedAccountDto(ResidentAssistantDto User, string TemporaryPassword);
+public sealed record TemporaryPasswordDto(string TemporaryPassword);
+public sealed record AuthenticatedAccountDto(Guid UserId, string SchoolEmail, string FirstName, string LastName,
+    HallRole Role, string SecurityStamp, bool MustChangePassword);
+
+public sealed record UpdateProfileRequest(string? PhoneNumber);
 
 public sealed record AssignmentDto(Guid Id, Guid UserId, string FirstName, string LastName, string? RoomNumber,
     AssignmentStatus Status, string? Notes, bool IsMine);
@@ -52,7 +63,7 @@ public sealed record UpdateScheduleRequest(int RequiredStaffPerShift, int Maximu
 
 public sealed record AdminAssignmentRequest(Guid UserId, string? Notes, bool OverrideRules = false);
 public sealed record UpdateShiftRequest(int RequiredStaffCount, ShiftStatus Status, byte[] RowVersion);
-public sealed record UpdateUserRequest(string? RoomNumber, string? PhoneNumber, bool IsActive);
+public sealed record UpdateUserRequest(string? RoomNumber, string? PhoneNumber, HallRole Role, bool IsActive);
 
 public sealed record DormResidentDto(Guid Id, string FirstName, string LastName);
 public sealed record DormRoomCheckSummaryDto(Guid Id, Guid CheckedByUserId, string CheckedByName, DateTimeOffset CheckedAt, int PhotoCount = 0);
@@ -89,6 +100,17 @@ public sealed record SaveDormResidentRequest(string FirstName, string LastName, 
 public interface ICurrentUserService
 {
     Task<CurrentUserDto> GetAsync(CancellationToken cancellationToken);
+}
+
+public interface IAccountService
+{
+    Task<AuthenticatedAccountDto> AuthenticateAsync(LoginRequest request, CancellationToken cancellationToken);
+    Task<AuthenticatedAccountDto> BootstrapAdminAsync(BootstrapAdminRequest request, string? bootstrapToken,
+        CancellationToken cancellationToken);
+    Task<AuthenticatedAccountDto> ChangePasswordAsync(Guid userId, ChangePasswordRequest request,
+        CancellationToken cancellationToken);
+    Task<ProvisionedAccountDto> CreateAsync(CreateStaffAccountRequest request, CancellationToken cancellationToken);
+    Task<TemporaryPasswordDto> ResetPasswordAsync(Guid userId, CancellationToken cancellationToken);
 }
 
 public interface IUserService

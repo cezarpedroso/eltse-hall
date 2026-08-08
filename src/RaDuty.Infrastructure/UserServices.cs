@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RaDuty.Application;
 using RaDuty.Domain;
@@ -9,62 +10,32 @@ public sealed class CurrentUserService(RaDutyDbContext db, ICurrentIdentityAcces
     public async Task<CurrentUserDto> GetAsync(CancellationToken cancellationToken)
     {
         var identity = identityAccessor.GetRequired();
-        var user = await db.Users.Include(x => x.HallMemberships).ThenInclude(x => x.ResidenceHall)
-            .SingleOrDefaultAsync(x => x.EntraObjectId == identity.EntraObjectId, cancellationToken);
-
-        if (user is null)
-        {
-            var hall = await db.ResidenceHalls.FirstOrDefaultAsync(x => x.IsActive, cancellationToken)
-                ?? throw new AppException(403, "NO_ACTIVE_HALL", "No active residence hall is configured.");
-            user = new User
-            {
-                EntraObjectId = identity.EntraObjectId,
-                SchoolEmail = identity.Email,
-                FirstName = identity.FirstName,
-                LastName = identity.LastName,
-                Role = TrustedRole(identity)
-            };
-            user.HallMemberships.Add(new HallMembership
-            {
-                ResidenceHall = hall,
-                User = user,
-                HallRole = user.Role
-            });
-            db.Users.Add(user);
-            await db.SaveChangesAsync(cancellationToken);
-        }
+        var user = await db.StaffUsers.Include(x => x.HallMemberships).ThenInclude(x => x.ResidenceHall)
+            .SingleOrDefaultAsync(x => x.Id == identity.UserId, cancellationToken)
+            ?? throw new AppException(401, "ACCOUNT_NOT_FOUND", "Your account is no longer available.");
 
         if (!user.IsActive) throw new AppException(403, "USER_INACTIVE", "Your residence-life account is inactive.");
         var membership = user.HallMemberships.SingleOrDefault(x => x.IsActive && x.ResidenceHall.IsActive)
             ?? throw new AppException(403, "NO_ACTIVE_MEMBERSHIP", "You do not have an active hall membership.");
-        var trustedRole = TrustedRole(identity);
-        if (user.Role != trustedRole || membership.HallRole != trustedRole)
-        {
-            user.Role = trustedRole;
-            membership.HallRole = trustedRole;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
-            await db.SaveChangesAsync(cancellationToken);
-        }
-        return ToDto(user, membership);
+        var account = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.UserId == user.Id, cancellationToken)
+            ?? throw new AppException(401, "ACCOUNT_NOT_FOUND", "Your account is no longer available.");
+        return ToDto(user, membership, account.MustChangePassword);
     }
 
-    internal static CurrentUserDto ToDto(User user, HallMembership membership) => new(user.Id, user.EntraObjectId,
+    internal static CurrentUserDto ToDto(User user, HallMembership membership, bool mustChangePassword = false) => new(user.Id,
         user.SchoolEmail, user.FirstName, user.LastName, user.RoomNumber, user.PhoneNumber, membership.HallRole,
-        user.IsActive, membership.ResidenceHallId, membership.ResidenceHall.Name);
-
-    private static HallRole TrustedRole(CurrentIdentity identity) => identity.IsAdmin ? HallRole.Admin
-        : identity.IsHallDirector ? HallRole.HallDirector : HallRole.ResidentAssistant;
+        user.IsActive, membership.ResidenceHallId, membership.ResidenceHall.Name, mustChangePassword);
 }
 
-public sealed class UserService(RaDutyDbContext db, ICurrentUserService currentUserService) : IUserService
+public sealed class UserService(RaDutyDbContext db, ICurrentUserService currentUserService,
+    UserManager<ApplicationAccount> accountManager) : IUserService
 {
     public async Task<CurrentUserDto> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken)
     {
-        ValidateContact(request.RoomNumber, request.PhoneNumber);
+        ValidateContact(null, request.PhoneNumber);
         var current = await currentUserService.GetAsync(cancellationToken);
-        var user = await db.Users.Include(x => x.HallMemberships).ThenInclude(x => x.ResidenceHall)
+        var user = await db.StaffUsers.Include(x => x.HallMemberships).ThenInclude(x => x.ResidenceHall)
             .SingleAsync(x => x.Id == current.Id, cancellationToken);
-        user.RoomNumber = Clean(request.RoomNumber);
         user.PhoneNumber = Clean(request.PhoneNumber);
         user.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
@@ -128,19 +99,31 @@ public sealed class UserService(RaDutyDbContext db, ICurrentUserService currentU
     {
         ValidateContact(request.RoomNumber, request.PhoneNumber);
         var actor = await currentUserService.GetAsync(cancellationToken);
-        var user = await db.Users.Include(x => x.HallMemberships)
+        var user = await db.StaffUsers.Include(x => x.HallMemberships)
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new AppException(404, "USER_NOT_FOUND", "Resident assistant not found.");
         var membership = user.HallMemberships.SingleOrDefault(x => x.ResidenceHallId == actor.ResidenceHallId)
             ?? throw new AppException(404, "USER_NOT_FOUND", "Resident assistant not found in this hall.");
-        var before = new { user.RoomNumber, user.IsActive };
+        if (actor.Role == HallRole.HallDirector && (membership.HallRole != HallRole.ResidentAssistant
+            || request.Role != HallRole.ResidentAssistant))
+            throw new AppException(403, "ROLE_CHANGE_NOT_ALLOWED", "Hall Directors can manage Resident Assistant accounts only.");
+        if (actor.Id == user.Id && (!request.IsActive || request.Role != actor.Role))
+            throw new AppException(400, "CANNOT_REMOVE_OWN_ACCESS", "You cannot deactivate or change your own role.");
+
+        var before = new { user.RoomNumber, user.PhoneNumber, user.Role, user.IsActive };
+        var invalidatesSession = user.Role != request.Role || user.IsActive != request.IsActive;
         user.RoomNumber = Clean(request.RoomNumber);
         user.PhoneNumber = Clean(request.PhoneNumber);
+        user.Role = request.Role;
         user.IsActive = request.IsActive;
         user.UpdatedAt = DateTimeOffset.UtcNow;
+        membership.HallRole = request.Role;
         membership.IsActive = request.IsActive;
+        var account = await accountManager.FindByIdAsync(user.Id.ToString())
+            ?? throw new AppException(409, "ACCOUNT_NOT_PROVISIONED", "This person does not have a login account.");
+        if (invalidatesSession) await accountManager.UpdateSecurityStampAsync(account);
         db.AuditLogs.Add(Audit(actor.Id, "USER_UPDATED", "User", user.Id, before,
-            new { user.RoomNumber, user.IsActive }));
+            new { user.RoomNumber, user.PhoneNumber, user.Role, user.IsActive }));
         await db.SaveChangesAsync(cancellationToken);
         return new ResidentAssistantDto(user.Id, user.FirstName, user.LastName, user.SchoolEmail,
             user.RoomNumber, user.PhoneNumber, membership.HallRole, user.IsActive);

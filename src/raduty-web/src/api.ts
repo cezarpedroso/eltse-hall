@@ -1,47 +1,86 @@
-import { apiScope, developmentUser, isDevelopmentAuth, msalInstance } from './auth'
 import type { ProblemDetails } from './types'
 
-const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://localhost:7068').replace(/\/$/, '')
+const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim()
+const baseUrl = configuredBaseUrl ? configuredBaseUrl.replace(/\/$/, '') : ''
+let csrfRequest: Promise<string> | undefined
 
 export class ApiError extends Error {
   readonly problem: ProblemDetails
   constructor(problem: ProblemDetails) { super(problem.title); this.problem = problem }
 }
 
-async function accessToken(): Promise<string | undefined> {
-  if (isDevelopmentAuth) return undefined
-  const account = msalInstance.getActiveAccount() ?? msalInstance.getAllAccounts()[0]
-  if (!account) return undefined
-  const response = await msalInstance.acquireTokenSilent({ account, scopes: [apiScope] })
-  return response.accessToken
+function isUnsafe(method?: string) {
+  return !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes((method ?? 'GET').toUpperCase())
+}
+
+async function csrfToken(): Promise<string> {
+  if (import.meta.env.MODE === 'test') return 'test-csrf-token'
+  if (!csrfRequest) {
+    csrfRequest = fetch(`${baseUrl}/api/auth/csrf`, { credentials: 'include', cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('The secure session could not be initialized.')
+        const body = await response.json() as { token?: string }
+        if (!body.token) throw new Error('The secure session token is missing.')
+        return body.token
+      })
+      .catch((error) => { csrfRequest = undefined; throw error })
+  }
+  return csrfRequest
+}
+
+export function resetCsrfToken() { csrfRequest = undefined }
+
+async function request(path: string, init: RequestInit, signal?: AbortSignal, allowCsrfRetry = true): Promise<Response> {
+  const headers = new Headers(init.headers)
+  if (init.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  if (isUnsafe(init.method)) headers.set('X-CSRF-TOKEN', await csrfToken())
+  const response = await fetch(`${baseUrl}${path}`, { ...init, headers, signal, credentials: 'include' })
+  const contentType = response.headers.get('content-type') ?? ''
+  if (response.status === 400 && isUnsafe(init.method) && allowCsrfRetry && !contentType.includes('application/problem+json')) {
+    resetCsrfToken()
+    return request(path, init, signal, false)
+  }
+  return response
 }
 
 export async function api<T>(path: string, init: RequestInit = {}, signal?: AbortSignal): Promise<T> {
-  const token = await accessToken()
-  const headers = new Headers(init.headers)
-  if (init.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
-  if (token) headers.set('Authorization', `Bearer ${token}`)
-  if (isDevelopmentAuth) headers.set('X-Dev-User', developmentUser)
-  const response = await fetch(`${baseUrl}${path}`, { ...init, headers, signal })
+  const response = await request(path, init, signal)
   if (!response.ok) {
     let problem: ProblemDetails
     try { problem = await response.json() as ProblemDetails }
     catch { problem = { status: response.status, title: 'The request could not be completed.', code: 'REQUEST_FAILED' } }
-    if (response.status === 401 && !isDevelopmentAuth) await msalInstance.loginRedirect({ scopes: [apiScope] })
     throw new ApiError(problem)
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
 
+export async function signIn(email: string, password: string, rememberMe: boolean): Promise<{ mustChangePassword: boolean }> {
+  const result = await api<{ mustChangePassword: boolean }>('/api/auth/login', {
+    method: 'POST', body: JSON.stringify({ email, password, rememberMe }),
+  })
+  resetCsrfToken()
+  return result
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await api('/api/auth/change-password', {
+    method: 'POST', body: JSON.stringify({ currentPassword, newPassword }),
+  })
+  resetCsrfToken()
+}
+
+export async function signOut(): Promise<void> {
+  try { await api('/api/auth/logout', { method: 'POST' }) }
+  finally { resetCsrfToken() }
+}
+
 export async function downloadPdf(path: string, filename: string): Promise<void> {
-  const token = await accessToken()
-  const headers = new Headers()
-  if (token) headers.set('Authorization', `Bearer ${token}`)
-  if (isDevelopmentAuth) headers.set('X-Dev-User', developmentUser)
-  const response = await fetch(`${baseUrl}${path}`, { headers })
+  const response = await fetch(`${baseUrl}${path}`, { credentials: 'include' })
   if (!response.ok) {
-    const problem = await response.json() as ProblemDetails
+    let problem: ProblemDetails
+    try { problem = await response.json() as ProblemDetails }
+    catch { problem = { status: response.status, title: 'The download could not be completed.', code: 'REQUEST_FAILED' } }
     throw new ApiError(problem)
   }
   const url = URL.createObjectURL(await response.blob())
