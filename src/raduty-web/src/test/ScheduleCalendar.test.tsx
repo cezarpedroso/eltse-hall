@@ -52,12 +52,25 @@ describe('Schedule calendar', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('monthly shift limit')
   })
 
-  it('does not expose controls for changing another person assignment', () => {
+  it('allows a Hall Director to assign a staff member', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 'ra-2', firstName: 'Jennie', lastName: 'Robison', schoolEmail: 'jennie@wmpenn.edu', role: 'ResidentAssistant', isActive: true, shiftCount: 0 }]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'assignment-2' }), { status: 201, headers: { 'Content-Type': 'application/json' } }))
     renderCalendar(makeSchedule(), directorUser)
     fireEvent.click(screen.getAllByRole('button', { name: /Monday, August 3, 2026/ })[0])
-    expect(screen.queryByText('Hall Director controls')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Lock shift' })).not.toBeInTheDocument()
-    expect(screen.getByText('You can only add or remove your own assignment.')).toBeInTheDocument()
+    const staff = await screen.findByLabelText('Assign staff member')
+    await screen.findByRole('option', { name: 'Jennie Robison' })
+    fireEvent.change(staff, { target: { value: 'ra-2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Assign shift' }))
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/admin/shifts/shift-1/assignments'), expect.objectContaining({ method: 'POST', body: expect.stringContaining('ra-2') })))
+  })
+
+  it('allows a Hall Director to unassign another person', async () => {
+    const assigned = makeShift({ assignments: [{ id: 'a1', userId: raUser.id, firstName: 'Jordan', lastName: 'Lee', status: 'Confirmed', isMine: false }] })
+    renderCalendar(makeSchedule([assigned]), directorUser)
+    fireEvent.click(screen.getByRole('button', { name: /Jordan Lee/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Unassign Jordan Lee' }))
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/admin/shifts/shift-1/assignments/a1'), expect.objectContaining({ method: 'DELETE' })))
   })
 
   it('has no automatically detectable accessibility violations', async () => {

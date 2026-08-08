@@ -43,7 +43,7 @@ export function SchedulePage({ user }: { user: CurrentUser }) {
       {schedule.isLoading && <CalendarSkeleton />}
       {schedule.isError && <ErrorState title={schedule.error instanceof ApiError && schedule.error.problem.code === 'SCHEDULE_NOT_FOUND' ? 'No schedule for this month' : 'Schedule unavailable'} message={schedule.error instanceof ApiError ? schedule.error.problem.title : 'We could not load this schedule.'} onRetry={() => schedule.refetch()} />}
       {schedule.data && <>
-        <p className="calendar-help">Tap a day to see the assigned team or change your own shift.</p>
+        <p className="calendar-help">{user.role === 'ResidentAssistant' ? 'Tap a day to see the assigned team or change your own shift.' : 'Tap a day to assign or unassign night-duty coverage.'}</p>
         <ScheduleCalendar schedule={schedule.data} user={user} />
         <div className="simple-calendar-key" aria-label="Calendar key"><span className="key-open">Open</span><span className="key-mine">Mine</span><span className="key-full">Assigned</span></div>
       </>}

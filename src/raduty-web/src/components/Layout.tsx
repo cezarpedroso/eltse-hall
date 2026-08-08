@@ -1,7 +1,7 @@
 import { CalendarDays, ClipboardCheck, ClipboardList, ContactRound, FileSpreadsheet, Home, LogOut, Menu, ShieldCheck, UserRound, UsersRound, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { isDevelopmentAuth, msalInstance } from '../auth'
+import { signOut as endSession } from '../api'
 import type { CurrentUser } from '../types'
 
 export function AppLayout({ user, children }: { user: CurrentUser; children: ReactNode }) {
@@ -24,7 +24,8 @@ export function AppLayout({ user, children }: { user: CurrentUser; children: Rea
     ] : []),
   ]
   async function signOut() {
-    if (!isDevelopmentAuth) await msalInstance.logoutRedirect()
+    await endSession()
+    window.location.assign('/')
   }
   return <div className={`app-shell ${location.pathname === '/schedule' ? 'app-shell--calendar' : ''}`}>
     <header className="topbar">
@@ -36,7 +37,7 @@ export function AppLayout({ user, children }: { user: CurrentUser; children: Rea
     <aside className={`mobile-drawer ${mobileOpen ? 'is-open' : ''}`} aria-hidden={!mobileOpen} inert={mobileOpen ? undefined : true}>
       <div className="mobile-drawer__head"><span className="brand"><strong>{user.residenceHallName}</strong></span><button className="icon-button" onClick={close} aria-label="Close navigation"><X /></button></div>
       <nav aria-label="Mobile navigation">{links.map(({ to, label, icon: Icon, end }) => <NavLink to={to} end={end} key={to} onClick={close}><Icon size={19} />{label}</NavLink>)}</nav>
-      <button className="drawer-signout" onClick={signOut}><LogOut size={18} />{isDevelopmentAuth ? 'Development session' : 'Sign out'}</button>
+      <button className="drawer-signout" onClick={signOut}><LogOut size={18} />Sign out</button>
     </aside>
     {mobileOpen && <button className="drawer-scrim" aria-label="Close navigation" onClick={close} />}
     <main id="main-content">{children}</main>

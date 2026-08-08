@@ -1,7 +1,7 @@
 import type { CurrentUser, Schedule, Shift } from '../types'
 
 export const raUser: CurrentUser = {
-  id: 'user-1', entraObjectId: 'oid-1', schoolEmail: 'jlee@university.edu', firstName: 'Jordan', lastName: 'Lee',
+  id: 'user-1', schoolEmail: 'jlee@wmpenn.edu', firstName: 'Jordan', lastName: 'Lee',
   roomNumber: '214', phoneNumber: '312-555-0102', role: 'ResidentAssistant', isActive: true,
   residenceHallId: 'hall-1', residenceHallName: 'Eltse Hall',
 }

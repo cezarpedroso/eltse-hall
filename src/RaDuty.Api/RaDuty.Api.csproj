@@ -11,7 +11,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Identity.Web" Version="4.14.2" />
     <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
   </ItemGroup>
 
@@ -21,5 +20,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>RaDuty.Api-local-development</UserSecretsId>
   </PropertyGroup>
+
+  <Target Name="BuildFrontendForPublish" BeforeTargets="ComputeFilesToPublish" Condition="'$(Configuration)' == 'Release'">
+    <Exec WorkingDirectory="..\raduty-web" Command="npm ci" />
+    <Exec WorkingDirectory="..\raduty-web" Command="npm run build" />
+    <ItemGroup>
+      <FrontendDist Include="..\raduty-web\dist\**\*" />
+      <ResolvedFileToPublish Include="@(FrontendDist->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 
 </Project>

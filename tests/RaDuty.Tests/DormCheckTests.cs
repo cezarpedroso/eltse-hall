@@ -16,14 +16,14 @@ public sealed class DormCheckTests
         var hall = new ResidenceHall { Name = "Eltse Hall" };
         var ra = new User
         {
-            EntraObjectId = "dev-ra", SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
+            SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
             Role = HallRole.ResidentAssistant
         };
         var room = new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "A" };
         room.Residents.Add(new DormResident { FirstName = "Alex", LastName = "Rivera" });
         db.AddRange(hall, ra, room);
         await db.SaveChangesAsync();
-        var current = new CurrentUserDto(ra.Id, ra.EntraObjectId, ra.SchoolEmail, ra.FirstName, ra.LastName,
+        var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
             null, null, ra.Role, true, hall.Id, hall.Name);
         var service = new DormCheckService(db, new StubCurrentUserService(current));
 
@@ -47,14 +47,14 @@ public sealed class DormCheckTests
             var hall = new ResidenceHall { Name = "Eltse Hall" };
             var ra = new User
             {
-                EntraObjectId = "dev-ra", SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
+                SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
                 Role = HallRole.ResidentAssistant
             };
             var room = new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "A" };
             var check = new DormRoomCheck { DormRoom = room, CheckedByUser = ra };
             db.AddRange(hall, ra, room, check);
             await db.SaveChangesAsync();
-            var current = new CurrentUserDto(ra.Id, ra.EntraObjectId, ra.SchoolEmail, ra.FirstName, ra.LastName,
+            var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
                 null, null, ra.Role, true, hall.Id, hall.Name);
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {

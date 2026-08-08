@@ -16,7 +16,7 @@ public sealed class DormRosterImportTests
         var hall = new ResidenceHall { Name = "Eltse Hall" };
         var director = new User
         {
-            EntraObjectId = "dev-director", SchoolEmail = "director@example.edu", FirstName = "Marisol", LastName = "Reyes",
+            SchoolEmail = "director@example.edu", FirstName = "Marisol", LastName = "Reyes",
             Role = HallRole.HallDirector
         };
         var roomA = new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "A" };
@@ -25,7 +25,7 @@ public sealed class DormRosterImportTests
         var former = new DormResident { DormRoom = roomB, FirstName = "Former", LastName = "Resident" };
         db.AddRange(hall, director, roomA, roomB, alex, former);
         await db.SaveChangesAsync();
-        var current = new CurrentUserDto(director.Id, director.EntraObjectId, director.SchoolEmail, director.FirstName,
+        var current = new CurrentUserDto(director.Id, director.SchoolEmail, director.FirstName,
             director.LastName, null, null, director.Role, true, hall.Id, hall.Name);
         var service = new DormRosterImportService(db, new StubCurrentUserService(current));
         var workbookBytes = WorkbookBytes();

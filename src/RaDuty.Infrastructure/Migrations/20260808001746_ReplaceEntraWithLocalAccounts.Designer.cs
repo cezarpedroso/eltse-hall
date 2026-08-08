@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RaDuty.Infrastructure;
 
@@ -11,9 +12,11 @@ using RaDuty.Infrastructure;
 namespace RaDuty.Infrastructure.Migrations
 {
     [DbContext(typeof(RaDutyDbContext))]
-    partial class RaDutyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260808001746_ReplaceEntraWithLocalAccounts")]
+    partial class ReplaceEntraWithLocalAccounts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
