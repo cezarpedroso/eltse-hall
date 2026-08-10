@@ -89,47 +89,51 @@ public sealed class AccountService(
         var hall = await db.ResidenceHalls.SingleOrDefaultAsync(x => x.IsActive, cancellationToken)
             ?? throw new AppException(409, "NO_ACTIVE_HALL", "Create the Eltse Hall database record before bootstrapping an administrator.");
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var user = await db.StaffUsers.Include(x => x.HallMemberships)
-            .SingleOrDefaultAsync(x => x.SchoolEmail == email, cancellationToken);
-        if (user is null)
+        var strategy = db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            user = new User { SchoolEmail = email, FirstName = firstName, LastName = lastName, Role = HallRole.Admin };
-            db.StaffUsers.Add(user);
-        }
-        else
-        {
-            user.FirstName = firstName;
-            user.LastName = lastName;
-            user.Role = HallRole.Admin;
-            user.IsActive = true;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
-        }
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            var user = await db.StaffUsers.Include(x => x.HallMemberships)
+                .SingleOrDefaultAsync(x => x.SchoolEmail == email, cancellationToken);
+            if (user is null)
+            {
+                user = new User { SchoolEmail = email, FirstName = firstName, LastName = lastName, Role = HallRole.Admin };
+                db.StaffUsers.Add(user);
+            }
+            else
+            {
+                user.FirstName = firstName;
+                user.LastName = lastName;
+                user.Role = HallRole.Admin;
+                user.IsActive = true;
+                user.UpdatedAt = DateTimeOffset.UtcNow;
+            }
 
-        var membership = user.HallMemberships.SingleOrDefault(x => x.ResidenceHallId == hall.Id);
-        if (membership is null)
-        {
-            membership = new HallMembership { ResidenceHall = hall, User = user, HallRole = HallRole.Admin };
-            user.HallMemberships.Add(membership);
-        }
-        membership.HallRole = HallRole.Admin;
-        membership.IsActive = true;
-        await db.SaveChangesAsync(cancellationToken);
+            var membership = user.HallMemberships.SingleOrDefault(x => x.ResidenceHallId == hall.Id);
+            if (membership is null)
+            {
+                membership = new HallMembership { ResidenceHall = hall, User = user, HallRole = HallRole.Admin };
+                user.HallMemberships.Add(membership);
+            }
+            membership.HallRole = HallRole.Admin;
+            membership.IsActive = true;
+            await db.SaveChangesAsync(cancellationToken);
 
-        var account = NewAccount(user, false);
-        var result = await accountManager.CreateAsync(account, request.Password);
-        ThrowIfFailed(result);
-        db.AuditLogs.Add(new AuditLog
-        {
-            ActorUserId = user.Id,
-            Action = "INITIAL_ADMIN_BOOTSTRAPPED",
-            EntityType = "User",
-            EntityId = user.Id.ToString(),
-            NewValuesJson = System.Text.Json.JsonSerializer.Serialize(new { user.SchoolEmail, Role = HallRole.Admin })
+            var account = NewAccount(user, false);
+            var result = await accountManager.CreateAsync(account, request.Password);
+            ThrowIfFailed(result);
+            db.AuditLogs.Add(new AuditLog
+            {
+                ActorUserId = user.Id,
+                Action = "INITIAL_ADMIN_BOOTSTRAPPED",
+                EntityType = "User",
+                EntityId = user.Id.ToString(),
+                NewValuesJson = System.Text.Json.JsonSerializer.Serialize(new { user.SchoolEmail, Role = HallRole.Admin })
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return ToAuthenticated(account, user, membership);
         });
-        await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return ToAuthenticated(account, user, membership);
     }
 
     public async Task<AuthenticatedAccountDto> ChangePasswordAsync(Guid userId, ChangePasswordRequest request,
@@ -208,18 +212,22 @@ public sealed class AccountService(
         }
         var temporaryPassword = GenerateTemporaryPassword();
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        if (db.Entry(user).State == EntityState.Detached) db.StaffUsers.Add(user);
-        await db.SaveChangesAsync(cancellationToken);
-        var account = NewAccount(user, true);
-        var result = await accountManager.CreateAsync(account, temporaryPassword);
-        ThrowIfFailed(result);
-        db.AuditLogs.Add(Audit(actor.Id, "ACCOUNT_CREATED", user, new { user.SchoolEmail, user.Role }));
-        await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        var strategy = db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            if (db.Entry(user).State == EntityState.Detached) db.StaffUsers.Add(user);
+            await db.SaveChangesAsync(cancellationToken);
+            var account = NewAccount(user, true);
+            var result = await accountManager.CreateAsync(account, temporaryPassword);
+            ThrowIfFailed(result);
+            db.AuditLogs.Add(Audit(actor.Id, "ACCOUNT_CREATED", user, new { user.SchoolEmail, user.Role }));
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
 
-        return new ProvisionedAccountDto(new ResidentAssistantDto(user.Id, user.FirstName, user.LastName,
-            user.SchoolEmail, user.RoomNumber, user.PhoneNumber, membership.HallRole, true), temporaryPassword);
+            return new ProvisionedAccountDto(new ResidentAssistantDto(user.Id, user.FirstName, user.LastName,
+                user.SchoolEmail, user.RoomNumber, user.PhoneNumber, membership.HallRole, true), temporaryPassword);
+        });
     }
 
     public async Task<TemporaryPasswordDto> ResetPasswordAsync(Guid userId, CancellationToken cancellationToken)
