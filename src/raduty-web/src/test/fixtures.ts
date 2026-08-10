@@ -6,6 +6,7 @@ export const raUser: CurrentUser = {
   residenceHallId: 'hall-1', residenceHallName: 'Eltse Hall',
 }
 export const directorUser: CurrentUser = { ...raUser, id: 'director-1', firstName: 'Marisol', lastName: 'Reyes', role: 'HallDirector' }
+export const adminUser: CurrentUser = { ...raUser, id: 'admin-1', firstName: 'Cezar', lastName: 'Pedroso', role: 'Admin' }
 
 export function makeShift(overrides: Partial<Shift> = {}): Shift {
   return {

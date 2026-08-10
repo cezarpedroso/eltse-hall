@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AccessError, SignInPage } from '../App'
@@ -7,7 +7,7 @@ import { ApiError } from '../api'
 import { AppLayout } from '../components/Layout'
 import { ToastProvider } from '../components/ui'
 import { ProfilePage } from '../pages/ProfilePage'
-import { directorUser, raUser } from './fixtures'
+import { adminUser, directorUser, raUser } from './fixtures'
 
 describe('Role-based navigation and forms', () => {
   it('can reveal and hide a typed password', () => {
@@ -29,7 +29,16 @@ describe('Role-based navigation and forms', () => {
   it('shows Hall Director navigation to directors', () => {
     render(<MemoryRouter><AppLayout user={directorUser}><div>content</div></AppLayout></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }))
-    expect(screen.getByRole('link', { name: 'Director desk' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Mobile navigation' })).getByRole('link', { name: 'Director desk' })).toBeInTheDocument()
+  })
+
+  it('shows the full desktop navigation for administrators', () => {
+    render(<MemoryRouter><AppLayout user={adminUser}><div>content</div></AppLayout></MemoryRouter>)
+    const desktopNav = screen.getByRole('navigation', { name: 'Primary navigation' })
+    expect(within(desktopNav).getByRole('link', { name: 'Schedule' })).toBeInTheDocument()
+    expect(within(desktopNav).getByRole('link', { name: 'Dorm check' })).toBeInTheDocument()
+    expect(within(desktopNav).getByRole('link', { name: 'People' })).toBeInTheDocument()
+    expect(within(desktopNav).getByRole('link', { name: 'Activity' })).toBeInTheDocument()
   })
 
   it('labels trusted and editable profile fields', () => {

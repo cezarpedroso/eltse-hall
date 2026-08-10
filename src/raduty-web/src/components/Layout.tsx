@@ -31,6 +31,9 @@ export function AppLayout({ user, children }: { user: CurrentUser; children: Rea
     <header className="topbar">
       <button className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation" title="Open navigation"><Menu /></button>
       <NavLink to="/" className="brand" aria-label={`${user.residenceHallName} home`}><strong>{user.residenceHallName}</strong></NavLink>
+      <nav className="desktop-nav" aria-label="Primary navigation">
+        {links.map(({ to, label, end }) => <NavLink to={to} end={end} key={to}>{label}</NavLink>)}
+      </nav>
       <NavLink to="/profile" className="account-chip" title={`${user.firstName} ${user.lastName}`}><span>{initials(user)}</span><div><strong>{user.firstName} {user.lastName}</strong><small>{user.role === 'Admin' ? 'Administrator' : isDirector ? 'Hall Director' : `RA · Room ${user.roomNumber ?? '—'}`}</small></div></NavLink>
       <NavLink to="/profile" className="mobile-account" aria-label="Open my profile">{initials(user)}</NavLink>
     </header>

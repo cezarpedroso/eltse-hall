@@ -45,17 +45,17 @@ h3 { font-size: .95rem; }
 .eyebrow { display: block; color: var(--primary); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px; }
 
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
-.topbar { height: 72px; padding: 0 clamp(20px, 4vw, 64px); display: flex; align-items: center; gap: 42px; background: rgba(255,255,255,.97); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30; }
+.topbar { height: 72px; padding: 0 clamp(20px, 4vw, 64px); display: flex; align-items: center; gap: clamp(18px, 3vw, 42px); background: rgba(255,255,255,.97); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30; }
 .brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; color: var(--ink); white-space: nowrap; }
 .brand__mark { width: 34px; height: 34px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--primary); color: #fff; font-family: 'Source Serif 4', serif; font-size: .78rem; font-weight: 600; letter-spacing: -.03em; }
 .brand > span:last-child { display: grid; line-height: 1.15; }
 .brand strong { font-family: 'Source Serif 4', serif; font-size: 1.08rem; }
 .brand small { color: var(--muted); font-size: .68rem; margin-top: 3px; }
-.desktop-nav { display: flex; align-self: stretch; gap: 30px; }
-.desktop-nav a { display: flex; align-items: center; color: var(--muted); text-decoration: none; font-size: .87rem; font-weight: 600; border-bottom: 2px solid transparent; }
+.desktop-nav { min-width: 0; flex: 1; display: flex; align-self: stretch; gap: clamp(14px, 2vw, 26px); overflow-x: auto; scrollbar-width: thin; }
+.desktop-nav a { flex: 0 0 auto; display: flex; align-items: center; color: var(--muted); text-decoration: none; font-size: .84rem; font-weight: 600; border-bottom: 2px solid transparent; white-space: nowrap; }
 .desktop-nav a:hover { color: var(--ink); }
 .desktop-nav a.active { color: var(--primary); border-color: var(--primary); }
-.account-chip { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+.account-chip { flex: 0 0 auto; margin-left: auto; display: flex; align-items: center; gap: 9px; }
 .account-chip > span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #e4e8e5; color: var(--primary-dark); font-size: .73rem; font-weight: 700; }
 .account-chip div { display: grid; line-height: 1.2; }
 .account-chip strong { font-size: .78rem; }
