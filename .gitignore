@@ -11,5 +11,6 @@ TestResults/
 coverage/
 **/App_Data/
 tmp/
+.codex-temp/
 *.xlsx
 *.xls

@@ -18,7 +18,7 @@ public sealed class AccountService(
     ICurrentUserService currentUserService) : IAccountService
 {
     private const int MaximumPasswordLength = 128;
-    private const string TemporaryPasswordAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@$%*-_";
+    private const string TemporaryPassword = "William.penn$$";
     private static readonly ApplicationAccount DummyAccount = new() { Id = Guid.Empty, UserName = "invalid" };
     private static readonly string DummyHash = new PasswordHasher<ApplicationAccount>()
         .HashPassword(DummyAccount, "This-password-is-never-used-2026!");
@@ -335,13 +335,7 @@ public sealed class AccountService(
     }
 
     private static string GenerateTemporaryPassword()
-    {
-        Span<byte> random = stackalloc byte[24];
-        RandomNumberGenerator.Fill(random);
-        var chars = new char[random.Length];
-        for (var i = 0; i < random.Length; i++) chars[i] = TemporaryPasswordAlphabet[random[i] % TemporaryPasswordAlphabet.Length];
-        return new string(chars);
-    }
+        => TemporaryPassword;
 
     private static bool FixedTimeEquals(string expected, string? actual)
     {

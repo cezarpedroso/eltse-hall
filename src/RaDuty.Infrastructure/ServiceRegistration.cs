@@ -16,7 +16,7 @@ public static class ServiceRegistration
         services.AddIdentityCore<ApplicationAccount>(options =>
             {
                 options.User.RequireUniqueEmail = true;
-                options.Password.RequiredLength = 15;
+                options.Password.RequiredLength = 14;
                 options.Password.RequiredUniqueChars = 1;
                 options.Password.RequireDigit = false;
                 options.Password.RequireLowercase = false;
