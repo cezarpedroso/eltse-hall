@@ -62,6 +62,13 @@ public sealed class AdminController(IScheduleService schedules, IUserService use
     public Task<ResidentAssistantDto> UpdateUser(Guid userId, UpdateUserRequest request, CancellationToken cancellationToken) =>
         users.UpdateUserAsync(userId, request, cancellationToken);
 
+    [HttpDelete("users/{userId:guid}")]
+    public async Task<IActionResult> DeleteUser(Guid userId, CancellationToken cancellationToken)
+    {
+        await users.DeleteUserAsync(userId, cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("users")]
     public Task<IReadOnlyList<ResidentAssistantDto>> GetUsers([FromQuery] string? search, CancellationToken cancellationToken) =>
         users.GetUsersAsync(search, cancellationToken);

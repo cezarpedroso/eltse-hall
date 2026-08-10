@@ -105,6 +105,73 @@ public sealed class AccountAuthenticationTests
         Assert.Equal("WEAK_PASSWORD", error.Code);
     }
 
+    [Fact]
+    public async Task Admins_can_delete_staff_access_without_removing_history_records()
+    {
+        var hallId = Guid.NewGuid();
+        var actor = new CurrentUserDto(Guid.NewGuid(), "admin@wmpenn.edu", "Cezar", "Pedroso",
+            null, null, HallRole.Admin, true, hallId, "Eltse Hall");
+        await using var provider = Services(actor);
+        var targetId = await SeedStaffAsync(provider, hallId, "ra@wmpenn.edu", HallRole.ResidentAssistant);
+        await using var scope = provider.CreateAsyncScope();
+        var users = scope.ServiceProvider.GetRequiredService<IUserService>();
+        var accounts = scope.ServiceProvider.GetRequiredService<IAccountService>();
+        var db = scope.ServiceProvider.GetRequiredService<RaDutyDbContext>();
+
+        await users.DeleteUserAsync(targetId, CancellationToken.None);
+
+        var deleted = await db.StaffUsers.Include(x => x.HallMemberships).SingleAsync(x => x.Id == targetId);
+        Assert.False(deleted.IsActive);
+        Assert.Empty(deleted.HallMemberships);
+        Assert.Empty(await db.Users.ToListAsync());
+        Assert.Equal("USER_DELETED", (await db.AuditLogs.SingleAsync()).Action);
+        var login = await Assert.ThrowsAsync<AppException>(() => accounts.AuthenticateAsync(
+            new LoginRequest("ra@wmpenn.edu", "A long private passphrase 2026"), CancellationToken.None));
+        Assert.Equal("INVALID_CREDENTIALS", login.Code);
+    }
+
+    [Fact]
+    public async Task Deleted_staff_email_can_be_recreated_in_the_same_hall()
+    {
+        var hallId = Guid.NewGuid();
+        var actor = new CurrentUserDto(Guid.NewGuid(), "admin@wmpenn.edu", "Cezar", "Pedroso",
+            null, null, HallRole.Admin, true, hallId, "Eltse Hall");
+        await using var provider = Services(actor);
+        var targetId = await SeedStaffAsync(provider, hallId, "ra@wmpenn.edu", HallRole.ResidentAssistant);
+        await using var scope = provider.CreateAsyncScope();
+        var users = scope.ServiceProvider.GetRequiredService<IUserService>();
+        var accounts = scope.ServiceProvider.GetRequiredService<IAccountService>();
+
+        await users.DeleteUserAsync(targetId, CancellationToken.None);
+        var recreated = await accounts.CreateAsync(new CreateStaffAccountRequest(
+            "ra@wmpenn.edu", "Jordan", "Lee", HallRole.ResidentAssistant, "214", null), CancellationToken.None);
+
+        Assert.Equal(targetId, recreated.User.Id);
+        Assert.Equal("William.penn$$", recreated.TemporaryPassword);
+    }
+
+    [Fact]
+    public async Task Hall_directors_can_delete_ras_but_not_other_directors_or_themselves()
+    {
+        var hallId = Guid.NewGuid();
+        var directorId = Guid.NewGuid();
+        var actor = new CurrentUserDto(directorId, "director@wmpenn.edu", "Carol", "Ocker",
+            null, null, HallRole.HallDirector, true, hallId, "Eltse Hall");
+        await using var provider = Services(actor);
+        var raId = await SeedStaffAsync(provider, hallId, "ra@wmpenn.edu", HallRole.ResidentAssistant);
+        var otherDirectorId = await SeedStaffAsync(provider, hallId, "otherdirector@wmpenn.edu", HallRole.HallDirector);
+        await SeedStaffAsync(provider, hallId, "director@wmpenn.edu", HallRole.HallDirector, directorId);
+        await using var scope = provider.CreateAsyncScope();
+        var users = scope.ServiceProvider.GetRequiredService<IUserService>();
+
+        await users.DeleteUserAsync(raId, CancellationToken.None);
+        var directorDelete = await Assert.ThrowsAsync<AppException>(() => users.DeleteUserAsync(otherDirectorId, CancellationToken.None));
+        var selfDelete = await Assert.ThrowsAsync<AppException>(() => users.DeleteUserAsync(directorId, CancellationToken.None));
+
+        Assert.Equal("USER_DELETE_NOT_ALLOWED", directorDelete.Code);
+        Assert.Equal("CANNOT_REMOVE_OWN_ACCESS", selfDelete.Code);
+    }
+
     private static ServiceProvider Services(CurrentUserDto? currentUser = null)
     {
         var services = new ServiceCollection();
@@ -130,6 +197,7 @@ public sealed class AccountAuthenticationTests
             new Dictionary<string, string?> { ["Authentication:AllowedEmailDomain"] = "wmpenn.edu" }).Build());
         services.AddScoped<ICurrentUserService>(_ => new StubCurrentUserService(currentUser));
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IUserService, UserService>();
         return services.BuildServiceProvider();
     }
 
@@ -168,6 +236,41 @@ public sealed class AccountAuthenticationTests
         };
         var result = await manager.CreateAsync(account, password);
         Assert.True(result.Succeeded, string.Join("; ", result.Errors.Select(x => x.Description)));
+    }
+
+    private static async Task<Guid> SeedStaffAsync(ServiceProvider provider, Guid hallId, string email, HallRole role,
+        Guid? id = null)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<RaDutyDbContext>();
+        var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationAccount>>();
+        var hall = await db.ResidenceHalls.SingleOrDefaultAsync(x => x.Id == hallId)
+            ?? new ResidenceHall { Id = hallId, Name = "Eltse Hall" };
+        if (db.Entry(hall).State == EntityState.Detached) db.ResidenceHalls.Add(hall);
+        var user = new User
+        {
+            Id = id ?? Guid.NewGuid(),
+            SchoolEmail = email,
+            FirstName = "Test",
+            LastName = "User",
+            Role = role
+        };
+        user.HallMemberships.Add(new HallMembership { ResidenceHall = hall, User = user, HallRole = role });
+        db.StaffUsers.Add(user);
+        await db.SaveChangesAsync();
+        var account = new ApplicationAccount
+        {
+            Id = user.Id,
+            UserId = user.Id,
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            LockoutEnabled = true,
+            SecurityStamp = Guid.NewGuid().ToString("N")
+        };
+        var result = await manager.CreateAsync(account, "A long private passphrase 2026");
+        Assert.True(result.Succeeded, string.Join("; ", result.Errors.Select(x => x.Description)));
+        return user.Id;
     }
 
     private sealed class StubCurrentUserService(CurrentUserDto? currentUser) : ICurrentUserService

@@ -121,6 +121,7 @@ public interface IUserService
     Task<IReadOnlyList<ResidentAssistantDto>> GetUsersAsync(string? search, CancellationToken cancellationToken);
     Task<ResidentAssistantDto> GetResidentAssistantAsync(Guid id, CancellationToken cancellationToken);
     Task<ResidentAssistantDto> UpdateUserAsync(Guid id, UpdateUserRequest request, CancellationToken cancellationToken);
+    Task DeleteUserAsync(Guid id, CancellationToken cancellationToken);
 }
 
 public interface IScheduleService

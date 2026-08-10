@@ -176,7 +176,7 @@ public sealed class AccountService(
 
         var user = await db.StaffUsers.Include(x => x.HallMemberships)
             .SingleOrDefaultAsync(x => x.SchoolEmail == email, cancellationToken);
-        HallMembership membership;
+        HallMembership? membership;
         if (user is null)
         {
             user = new User
@@ -198,8 +198,26 @@ public sealed class AccountService(
         }
         else
         {
-            membership = user.HallMemberships.SingleOrDefault(x => x.ResidenceHallId == actor.ResidenceHallId)
-                ?? throw new AppException(409, "EMAIL_ALREADY_EXISTS", "That school email belongs to a person in another hall.");
+            foreach (var removedMembership in user.HallMemberships
+                         .Where(x => db.Entry(x).State == EntityState.Deleted).ToList())
+            {
+                user.HallMemberships.Remove(removedMembership);
+                db.Entry(removedMembership).State = EntityState.Detached;
+            }
+            membership = user.HallMemberships.SingleOrDefault(x => x.ResidenceHallId == actor.ResidenceHallId);
+            if (membership is null)
+            {
+                if (user.HallMemberships.Any(x => x.IsActive))
+                    throw new AppException(409, "EMAIL_ALREADY_EXISTS", "That school email belongs to a person in another hall.");
+                membership = new HallMembership
+                {
+                    ResidenceHallId = actor.ResidenceHallId,
+                    User = user,
+                    HallRole = request.Role
+                };
+                user.HallMemberships.Add(membership);
+                db.Entry(membership).State = EntityState.Added;
+            }
             user.FirstName = firstName;
             user.LastName = lastName;
             user.RoomNumber = Clean(request.RoomNumber);

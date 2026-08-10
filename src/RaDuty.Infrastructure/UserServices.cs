@@ -129,6 +129,37 @@ public sealed class UserService(RaDutyDbContext db, ICurrentUserService currentU
             user.RoomNumber, user.PhoneNumber, membership.HallRole, user.IsActive);
     }
 
+    public async Task DeleteUserAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var actor = await currentUserService.GetAsync(cancellationToken);
+        var user = await db.StaffUsers.Include(x => x.HallMemberships)
+            .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+            ?? throw new AppException(404, "USER_NOT_FOUND", "Resident assistant not found.");
+        var membership = user.HallMemberships.SingleOrDefault(x => x.ResidenceHallId == actor.ResidenceHallId)
+            ?? throw new AppException(404, "USER_NOT_FOUND", "Resident assistant not found in this hall.");
+        if (actor.Id == user.Id)
+            throw new AppException(400, "CANNOT_REMOVE_OWN_ACCESS", "You cannot delete your own account.");
+        if (actor.Role == HallRole.HallDirector && membership.HallRole != HallRole.ResidentAssistant)
+            throw new AppException(403, "USER_DELETE_NOT_ALLOWED", "Hall Directors can delete Resident Assistant accounts only.");
+
+        var before = new { user.RoomNumber, user.PhoneNumber, user.Role, user.IsActive, membership.HallRole, MembershipActive = membership.IsActive };
+        user.IsActive = false;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
+        var account = await accountManager.FindByIdAsync(user.Id.ToString());
+        if (account is not null)
+        {
+            var result = await accountManager.DeleteAsync(account);
+            if (!result.Succeeded)
+                throw new AppException(409, "ACCOUNT_DELETE_FAILED", "The login account could not be deleted.");
+            db.Entry(account).State = EntityState.Detached;
+        }
+        db.HallMemberships.Remove(membership);
+        db.AuditLogs.Add(Audit(actor.Id, "USER_DELETED", "User", user.Id, before,
+            new { user.Role, user.IsActive, HallMembershipRemoved = true, LoginDeleted = account is not null }));
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+    }
+
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static void ValidateContact(string? room, string? phone)

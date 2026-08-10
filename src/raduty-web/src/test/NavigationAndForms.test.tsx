@@ -30,6 +30,8 @@ describe('Role-based navigation and forms', () => {
     render(<MemoryRouter><AppLayout user={directorUser}><div>content</div></AppLayout></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }))
     expect(within(screen.getByRole('navigation', { name: 'Mobile navigation' })).getByRole('link', { name: 'Director desk' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('link', { name: 'People' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('link', { name: 'Activity' })).toBeInTheDocument()
   })
 
   it('shows the full desktop navigation for administrators', () => {
