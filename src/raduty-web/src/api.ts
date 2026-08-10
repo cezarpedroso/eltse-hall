@@ -34,7 +34,7 @@ async function request(path: string, init: RequestInit, signal?: AbortSignal, al
   const headers = new Headers(init.headers)
   if (init.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (isUnsafe(init.method)) headers.set('X-CSRF-TOKEN', await csrfToken())
-  const response = await fetch(`${baseUrl}${path}`, { ...init, headers, signal, credentials: 'include' })
+  const response = await fetch(`${baseUrl}${path}`, { ...init, headers, signal, credentials: 'include', cache: isUnsafe(init.method) ? init.cache : 'no-store' })
   const contentType = response.headers.get('content-type') ?? ''
   if (response.status === 400 && isUnsafe(init.method) && allowCsrfRetry && !contentType.includes('application/problem+json')) {
     resetCsrfToken()

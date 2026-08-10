@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { ApiError, api } from '../api'
 import { Dialog, EmptyState, ErrorState } from '../components/ui'
 import { useToast } from '../components/toast'
+import { refreshResidentData, residentQueryKeys, sharedResidentQueryOptions } from '../residentData'
 import type { CurrentUser, DormRoomOption, ManagedDormResident } from '../types'
 
 type ResidentForm = { firstName: string; lastName: string; dormRoomId: string; sportOrActivity: string }
@@ -15,8 +16,8 @@ export function ResidentManagementPage({ user }: { user: CurrentUser }) {
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<ManagedDormResident | null>(null)
   const [transferring, setTransferring] = useState<ManagedDormResident | null>(null)
-  const residents = useQuery({ queryKey: ['residents'], queryFn: ({ signal }) => api<ManagedDormResident[]>('/api/residents', {}, signal) })
-  const rooms = useQuery({ queryKey: ['resident-rooms'], queryFn: ({ signal }) => api<DormRoomOption[]>('/api/residents/rooms', {}, signal) })
+  const residents = useQuery({ queryKey: residentQueryKeys.residents, queryFn: ({ signal }) => api<ManagedDormResident[]>('/api/residents', {}, signal), ...sharedResidentQueryOptions })
+  const rooms = useQuery({ queryKey: residentQueryKeys.rooms, queryFn: ({ signal }) => api<DormRoomOption[]>('/api/residents/rooms', {}, signal), ...sharedResidentQueryOptions })
   const queryClient = useQueryClient()
   const toast = useToast()
   const remove = useMutation({
@@ -66,11 +67,4 @@ function ResidentEditorDialog({ open, resident, rooms, onClose, onTransfer }: { 
   return <Dialog open={open} onClose={() => !save.isPending && onClose()} title={resident ? `Edit ${resident.firstName} ${resident.lastName}` : 'Add resident'} className="resident-editor-dialog"><form className="resident-editor-form" onSubmit={submit}><div className="resident-form-grid"><label className="field"><span>First name</span><input required maxLength={80} value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} /></label><label className="field"><span>Last name</span><input required maxLength={80} value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} /></label><label className="field field--wide"><span>Eltse room</span><select required value={form.dormRoomId} onChange={(event) => setForm({ ...form, dormRoomId: event.target.value })}><option value="" disabled>Select a room</option>{rooms.map((room) => <option value={room.id} disabled={room.occupancy >= room.capacity && room.id !== resident?.dormRoomId} key={room.id}>{room.roomCode} · {room.occupancy}/{room.capacity}{room.occupancy >= room.capacity && room.id !== resident?.dormRoomId ? ' full' : ''}</option>)}</select><small>Changing this room moves the resident within Eltse Hall.</small></label><label className="field field--wide"><span>Sport or activity <small>Optional</small></span><input maxLength={120} value={form.sportOrActivity} onChange={(event) => setForm({ ...form, sportOrActivity: event.target.value })} /></label></div>{resident && <div className="resident-move-out"><div><strong>Moving to another dorm?</strong><span>Remove this resident from the Eltse roster.</span></div><button type="button" className="button button--danger-quiet" onClick={() => onTransfer(resident)}><UserMinus size={16} />Move to another dorm</button></div>}{save.isError && <p className="inline-error" role="alert">{save.error instanceof ApiError ? save.error.problem.title : 'The resident could not be saved.'}</p>}<div className="dialog-actions"><button type="submit" className="button button--primary" disabled={save.isPending || !form.dormRoomId}>{save.isPending ? 'Saving…' : resident ? 'Save changes' : 'Add resident'}</button><button type="button" className="button button--quiet" onClick={onClose} disabled={save.isPending}>Cancel</button></div></form></Dialog>
 }
 
-async function refreshResidentData(queryClient: ReturnType<typeof useQueryClient>) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['residents'] }),
-    queryClient.invalidateQueries({ queryKey: ['resident-rooms'] }),
-    queryClient.invalidateQueries({ queryKey: ['dorm-check-suites'] }),
-  ])
-}
 function initials(resident: ManagedDormResident) { return `${resident.firstName[0] ?? ''}${resident.lastName[0] ?? ''}` }

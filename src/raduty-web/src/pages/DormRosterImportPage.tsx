@@ -4,6 +4,7 @@ import { useState, type ChangeEvent } from 'react'
 import { ApiError, api } from '../api'
 import { Dialog } from '../components/ui'
 import { useToast } from '../components/toast'
+import { refreshResidentData } from '../residentData'
 import type { DormRosterChange, DormRosterImportPreview } from '../types'
 
 export function DormRosterImportPage() {
@@ -25,7 +26,7 @@ export function DormRosterImportPage() {
       setConfirmApply(false)
       setApplied(true)
       toast(`Resident roster updated with ${result.residentCount} ELTS residents.`)
-      await queryClient.invalidateQueries({ queryKey: ['dorm-check-suites'] })
+      await refreshResidentData(queryClient)
     },
   })
   const changeCount = preview ? preview.addedResidents + preview.removedResidents + preview.movedResidents + preview.updatedResidents : 0

@@ -4,10 +4,11 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { api, ApiError, downloadPdf } from '../api'
 import { Dialog, ErrorState } from '../components/ui'
 import { useToast } from '../components/toast'
+import { residentQueryKeys, sharedResidentQueryOptions } from '../residentData'
 import type { DormCheckPhoto, DormCheckReset, DormRoom, DormRoomCheck, DormSuite } from '../types'
 
 export function DormCheckPage() {
-  const suites = useQuery({ queryKey: ['dorm-check-suites'], queryFn: ({ signal }) => api<DormSuite[]>('/api/dorm-checks/suites', {}, signal) })
+  const suites = useQuery({ queryKey: residentQueryKeys.dormCheckSuites, queryFn: ({ signal }) => api<DormSuite[]>('/api/dorm-checks/suites', {}, signal), ...sharedResidentQueryOptions })
   const [selectedRoom, setSelectedRoom] = useState<DormRoom | null>(null)
   const [openSuite, setOpenSuite] = useState<string | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -27,7 +28,7 @@ export function DormCheckPage() {
     onSuccess: async ({ deletedChecks }) => {
       setConfirmReset(false)
       setOpenSuite(null)
-      await queryClient.invalidateQueries({ queryKey: ['dorm-check-suites'] })
+      await queryClient.invalidateQueries({ queryKey: residentQueryKeys.dormCheckSuites })
       toast(`${deletedChecks} dorm check${deletedChecks === 1 ? '' : 's'} reset`, 'success')
     },
   })
@@ -98,7 +99,7 @@ function RoomCheckDialog({ room, onClose }: { room: DormRoom; onClose: () => voi
       return { check, uploadError }
     },
     onSuccess: async ({ uploadError }) => {
-      await queryClient.invalidateQueries({ queryKey: ['dorm-check-suites'] })
+      await queryClient.invalidateQueries({ queryKey: residentQueryKeys.dormCheckSuites })
       toast(uploadError ? `${room.roomCode} check saved, but its pictures could not be uploaded.` : `${room.roomCode} check saved`, uploadError ? 'error' : 'success')
       onClose()
     },
