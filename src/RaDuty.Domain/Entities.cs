@@ -46,7 +46,7 @@ public sealed class SchedulePeriod : Entity
     public ResidenceHall ResidenceHall { get; set; } = null!;
     public int Year { get; set; }
     public int Month { get; set; }
-    public ScheduleStatus Status { get; private set; } = ScheduleStatus.Draft;
+    public ScheduleStatus Status { get; private set; } = ScheduleStatus.OpenForSelection;
     public DateTimeOffset? OpensAt { get; set; }
     public DateTimeOffset? ClosesAt { get; set; }
     public DateTimeOffset? PublishedAt { get; set; }
@@ -61,32 +61,6 @@ public sealed class SchedulePeriod : Entity
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<DutyShift> Shifts { get; set; } = [];
-
-    public void TransitionTo(ScheduleStatus next, DateTimeOffset now, Guid? actorId = null)
-    {
-        var allowed = Status switch
-        {
-            ScheduleStatus.Draft => next is ScheduleStatus.OpenForSelection,
-            ScheduleStatus.OpenForSelection => next is ScheduleStatus.Closed or ScheduleStatus.Draft,
-            ScheduleStatus.Closed => next is ScheduleStatus.OpenForSelection or ScheduleStatus.Published,
-            ScheduleStatus.Published => next is ScheduleStatus.Closed or ScheduleStatus.Archived,
-            ScheduleStatus.Archived => false,
-            _ => false
-        };
-
-        if (!allowed)
-            throw new DomainRuleException("INVALID_STATE_TRANSITION", $"A {Status} schedule cannot transition to {next}.");
-
-        Status = next;
-        UpdatedAt = now;
-        if (next == ScheduleStatus.OpenForSelection) OpensAt ??= now;
-        if (next == ScheduleStatus.Closed) ClosesAt = now;
-        if (next == ScheduleStatus.Published)
-        {
-            PublishedAt = now;
-            PublishedByUserId = actorId;
-        }
-    }
 
     public void SetInitialStatusForSeed(ScheduleStatus status) => Status = status;
 }

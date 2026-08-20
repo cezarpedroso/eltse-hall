@@ -38,28 +38,22 @@ public sealed class ShiftTimeFactoryTests
     }
 }
 
-public sealed class ScheduleLifecycleTests
+public sealed class ScheduleMonthWindowTests
 {
-    [Fact]
-    public void Valid_lifecycle_reaches_archived()
-    {
-        var period = Period();
-        period.TransitionTo(ScheduleStatus.OpenForSelection, DateTimeOffset.UtcNow);
-        period.TransitionTo(ScheduleStatus.Closed, DateTimeOffset.UtcNow);
-        period.TransitionTo(ScheduleStatus.Published, DateTimeOffset.UtcNow, Guid.NewGuid());
-        period.TransitionTo(ScheduleStatus.Archived, DateTimeOffset.UtcNow);
-        Assert.Equal(ScheduleStatus.Archived, period.Status);
-        Assert.NotNull(period.PublishedAt);
-    }
+    [Theory]
+    [InlineData(2026, 12, 2026, 12, true)]
+    [InlineData(2027, 1, 2026, 12, true)]
+    [InlineData(2027, 2, 2026, 12, true)]
+    [InlineData(2027, 3, 2026, 12, false)]
+    [InlineData(2026, 11, 2026, 12, false)]
+    public void Includes_current_month_and_two_months_ahead(int year, int month, int currentYear,
+        int currentMonth, bool expected) =>
+        Assert.Equal(expected, ScheduleMonthWindow.Contains(year, month, new DateOnly(currentYear, currentMonth, 15)));
 
     [Fact]
-    public void Invalid_transition_is_rejected()
-    {
-        var exception = Assert.Throws<DomainRuleException>(() => Period().TransitionTo(ScheduleStatus.Published, DateTimeOffset.UtcNow));
-        Assert.Equal("INVALID_STATE_TRANSITION", exception.Code);
-    }
-
-    private static SchedulePeriod Period() => new() { ResidenceHallId = Guid.NewGuid(), Year = 2026, Month = 8 };
+    public void New_schedules_are_live_immediately() =>
+        Assert.Equal(ScheduleStatus.OpenForSelection,
+            new SchedulePeriod { ResidenceHallId = Guid.NewGuid(), Year = 2026, Month = 8 }.Status);
 }
 
 public sealed class AssignmentRuleTests
@@ -82,6 +76,14 @@ public sealed class AssignmentRuleTests
     {
         var context = Context(active: 20, weekend: 10, capacity: 5, date: new DateOnly(2026, 8, 7));
         AssignmentRuleEvaluator.EnsureCanAssign(context, directorOverride: true);
+    }
+
+    [Fact]
+    public void Legacy_schedule_status_does_not_block_assignment()
+    {
+        var context = Context();
+        context.Period.SetInitialStatusForSeed(ScheduleStatus.Draft);
+        AssignmentRuleEvaluator.EnsureCanAssign(context);
     }
 
     [Fact]
@@ -133,7 +135,7 @@ public sealed class PersistenceAndPdfTests
         var shift = new ShiftDto(Guid.NewGuid(), new DateOnly(2026, 8, 7), DateTimeOffset.Parse("2026-08-08T02:00:00Z"),
             DateTimeOffset.Parse("2026-08-08T07:00:00Z"), 1, ShiftStatus.Open, [], []);
         var schedule = new ScheduleDto(Guid.NewGuid(), Guid.NewGuid(), "Eltse Hall", "America/Chicago", 2026, 8,
-            ScheduleStatus.Published, null, null, DateTimeOffset.UtcNow,
+            ScheduleStatus.Draft, null, null, null,
             new ScheduleConfigurationDto(1, 6, 3, false, false, false, true), [shift]);
         var directory = new[]
         {

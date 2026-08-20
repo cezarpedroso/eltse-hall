@@ -66,11 +66,9 @@ public sealed class SchedulePdfService : ISchedulePdfService
             });
             row.AutoItem().AlignRight().Column(right =>
             {
-                right.Item().AlignRight().Background(StatusColor(schedule.Status)).PaddingHorizontal(9).PaddingVertical(4)
-                    .Text(StatusLabel(schedule.Status)).SemiBold().FontSize(7.5f).FontColor(StatusTextColor(schedule.Status));
-                right.Item().PaddingTop(5).AlignRight().Text(schedule.PublishedAt is null
-                        ? "Current working schedule"
-                        : $"Published {schedule.PublishedAt:MMM d, yyyy}")
+                right.Item().AlignRight().Background(PrimarySoft).PaddingHorizontal(9).PaddingVertical(4)
+                    .Text("LIVE SCHEDULE").SemiBold().FontSize(7.5f).FontColor(Primary);
+                right.Item().PaddingTop(5).AlignRight().Text("Changes appear immediately")
                     .FontSize(7).FontColor(Muted);
             });
         });
@@ -289,23 +287,4 @@ public sealed class SchedulePdfService : ISchedulePdfService
         };
     }
 
-    private static string StatusLabel(ScheduleStatus status) => status switch
-    {
-        ScheduleStatus.OpenForSelection => "SELECTION OPEN",
-        ScheduleStatus.Closed => "SELECTION CLOSED",
-        _ => status.ToString().ToUpperInvariant()
-    };
-
-    private static string StatusColor(ScheduleStatus status) => status switch
-    {
-        ScheduleStatus.Published => Primary,
-        ScheduleStatus.OpenForSelection => "#E8F3ED",
-        ScheduleStatus.Closed => "#EEF1EF",
-        ScheduleStatus.Draft => "#FFF3D7",
-        _ => "#EEF1EF"
-    };
-
-    private static string StatusTextColor(ScheduleStatus status) => status == ScheduleStatus.Published
-        ? Colors.White
-        : status == ScheduleStatus.Draft ? "#7A5715" : Primary;
 }

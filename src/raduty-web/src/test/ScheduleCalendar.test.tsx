@@ -27,9 +27,9 @@ describe('Schedule calendar', () => {
     expect(screen.getByText('Jordan Lee').closest('.calendar-event')).toHaveClass('calendar-event--mine')
   })
 
-  it('selects an open shift and confirms through the API', async () => {
+  it('selects an open shift without a lifecycle status gate', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ id: 'a1' }), { status: 201, headers: { 'Content-Type': 'application/json' } }))
-    renderCalendar()
+    renderCalendar({ ...makeSchedule(), status: 'Draft' })
     fireEvent.click(screen.getAllByRole('button', { name: /Monday, August 3, 2026/ })[0])
     fireEvent.click(screen.getByRole('button', { name: 'Select this shift' }))
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/shifts/shift-1/assignments/me'), expect.objectContaining({ method: 'POST' })))

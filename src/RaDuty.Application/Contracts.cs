@@ -132,7 +132,6 @@ public interface IScheduleService
     Task RemoveMeAsync(Guid shiftId, CancellationToken cancellationToken);
     Task<ScheduleDto> GenerateAsync(int year, int month, GenerateScheduleRequest request, CancellationToken cancellationToken);
     Task<ScheduleDto> UpdateAsync(Guid periodId, UpdateScheduleRequest request, CancellationToken cancellationToken);
-    Task<ScheduleDto> TransitionAsync(Guid periodId, ScheduleStatus status, CancellationToken cancellationToken);
     Task<AssignmentDto> AssignAsync(Guid shiftId, AdminAssignmentRequest request, CancellationToken cancellationToken);
     Task RemoveAssignmentAsync(Guid shiftId, Guid assignmentId, CancellationToken cancellationToken);
     Task<ShiftDto> UpdateShiftAsync(Guid shiftId, UpdateShiftRequest request, CancellationToken cancellationToken);

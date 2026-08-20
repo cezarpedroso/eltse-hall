@@ -15,6 +15,17 @@ public static class ShiftTimeFactory
     public static bool IsWeekend(DateOnly date) => date.DayOfWeek is DayOfWeek.Friday or DayOfWeek.Saturday;
 }
 
+public static class ScheduleMonthWindow
+{
+    public static bool Contains(int year, int month, DateOnly localToday, int monthsAhead = 2)
+    {
+        if (month is < 1 or > 12 || monthsAhead < 0) return false;
+        var requested = year * 12 + month - 1;
+        var current = localToday.Year * 12 + localToday.Month - 1;
+        return requested >= current && requested <= current + monthsAhead;
+    }
+}
+
 public sealed record AssignmentRuleContext(
     SchedulePeriod Period,
     DutyShift Shift,
@@ -31,7 +42,6 @@ public static class AssignmentRuleEvaluator
     {
         if (!context.User.IsActive) Throw("USER_INACTIVE", "Inactive users cannot be assigned.");
         if (context.IsAlreadyAssigned) Throw("USER_ALREADY_ASSIGNED", "This user is already assigned to the shift.");
-        if (!directorOverride && context.Period.Status != ScheduleStatus.OpenForSelection) Throw("SCHEDULE_NOT_OPEN", "This schedule is not open for selection.");
         if (!directorOverride && context.ActiveShiftAssignmentCount >= context.Shift.RequiredStaffCount) Throw("SHIFT_FULL", "This shift is already fully staffed.");
         if (!directorOverride && context.ActiveAssignmentCount >= context.Period.MaximumShiftsPerUser) Throw("MAXIMUM_SHIFTS_REACHED", "The monthly shift limit has been reached.");
         if (!directorOverride && ShiftTimeFactory.IsWeekend(context.Shift.DutyDate) && context.ActiveWeekendAssignmentCount >= context.Period.MaximumWeekendShiftsPerUser)
