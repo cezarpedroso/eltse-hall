@@ -213,7 +213,7 @@ public sealed class SchedulePdfService : ISchedulePdfService
                 var person = people[index];
                 var background = index % 2 == 0 ? "#FFFFFF" : "#F8FAF8";
                 DirectoryCell(table.Cell(), $"{person.FirstName} {person.LastName}", background, semiBold: true);
-                DirectoryCell(table.Cell(), RoleLabel(person.Role), background);
+                DirectoryCell(table.Cell(), RoleLabel(person), background);
                 DirectoryCell(table.Cell(), person.SchoolEmail, background);
                 DirectoryCell(table.Cell(), string.IsNullOrWhiteSpace(person.RoomNumber) ? "-" : person.RoomNumber, background);
                 DirectoryCell(table.Cell(), string.IsNullOrWhiteSpace(person.PhoneNumber) ? "-" : person.PhoneNumber, background);
@@ -275,13 +275,19 @@ public sealed class SchedulePdfService : ISchedulePdfService
         _ => 3
     };
 
-    private static string RoleLabel(HallRole role) => role switch
+    private static string RoleLabel(ResidentAssistantDto person)
     {
-        HallRole.ResidentAssistant => "Resident Assistant",
-        HallRole.HallDirector => "Hall Director",
-        HallRole.Admin => "Admin",
-        _ => role.ToString()
-    };
+        if (string.Equals(person.SchoolEmail, "CezarPedroso@wmpenn.edu", StringComparison.OrdinalIgnoreCase))
+            return "Resident Assistant";
+
+        return person.Role switch
+        {
+            HallRole.ResidentAssistant => "Resident Assistant",
+            HallRole.HallDirector => "Hall Director",
+            HallRole.Admin => "Admin",
+            _ => person.Role.ToString()
+        };
+    }
 
     private static string StatusLabel(ScheduleStatus status) => status switch
     {
