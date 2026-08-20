@@ -143,7 +143,8 @@ public interface IScheduleService
 
 public interface ISchedulePdfService
 {
-    byte[] Render(ScheduleDto schedule, DateTimeOffset generatedAt);
+    byte[] Render(ScheduleDto schedule, IReadOnlyList<ResidentAssistantDto> staffDirectory,
+        DateTimeOffset generatedAt);
 }
 
 public interface IDormCheckService

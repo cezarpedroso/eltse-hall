@@ -35,7 +35,7 @@ export function SchedulePage({ user }: { user: CurrentUser }) {
       <div className="calendar-month-title" aria-label="Current schedule month"><strong>{monthName(period.month)}</strong><span>{period.year}</span></div>
       <div className="calendar-toolbar-actions">
         {schedule.data && <><span className={`simple-status simple-status--${schedule.data.status}`}><i />{statusLabel(schedule.data.status)}</span><span className="calendar-shift-count"><strong>{summary.data?.myShiftCount ?? '—'}</strong>/{schedule.data.configuration.maximumShiftsPerUser} nights</span></>}
-        <button className="quiet-icon-button" onClick={exportSchedule} disabled={!schedule.data || exporting} aria-label={exporting ? 'Preparing PDF' : 'Export schedule PDF'} title="Export PDF"><Download size={19} /></button>
+        <button className="schedule-download-button" onClick={exportSchedule} disabled={!schedule.data || exporting} aria-label={exporting ? 'Preparing PDF' : 'Download schedule PDF'}><Download size={18} /><span>{exporting ? 'Preparing…' : 'Download PDF'}</span></button>
       </div>
     </header>
 

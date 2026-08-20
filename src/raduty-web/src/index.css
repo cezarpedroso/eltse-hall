@@ -824,6 +824,9 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .calendar-toolbar-actions { display: flex; align-items: center; gap: 16px; }
 .calendar-shift-count { color: var(--muted); font-size: .7rem; }
 .calendar-shift-count strong { color: var(--ink); }
+.schedule-download-button { min-height: 40px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font-size: .7rem; font-weight: 750; cursor: pointer; white-space: nowrap; }
+.schedule-download-button:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+.schedule-download-button:disabled { opacity: .5; cursor: not-allowed; }
 .calendar-stage { min-height: 0; display: flex; flex-direction: column; }
 .calendar-help { min-height: 30px; margin: 0; display: flex; align-items: center; color: var(--muted); font-size: .68rem; }
 .calendar-stage > .simple-calendar { min-height: 0; flex: 1; display: grid !important; grid-template-rows: auto minmax(0, 1fr); border-radius: 0; box-shadow: 0 0 0 1px var(--line); }
@@ -855,6 +858,8 @@ td a:hover { color: var(--primary); text-decoration: underline; }
   .calendar-toolbar-actions .simple-status { font-size: 0; gap: 0; }
   .calendar-toolbar-actions .simple-status i { width: 8px; height: 8px; }
   .calendar-shift-count { font-size: .62rem; }
+  .schedule-download-button { width: 42px; min-height: 42px; padding: 0; justify-content: center; border: 0; border-radius: 50%; background: transparent; }
+  .schedule-download-button span { display: none; }
   .calendar-stage { overflow: hidden; }
   .calendar-help { min-height: 30px; padding: 0 10px; font-size: .6rem; }
   .calendar-stage > .simple-calendar { border-left: 0; border-right: 0; box-shadow: 0 1px 0 var(--line), 0 -1px 0 var(--line); }
