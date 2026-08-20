@@ -135,8 +135,15 @@ public sealed class PersistenceAndPdfTests
         var schedule = new ScheduleDto(Guid.NewGuid(), Guid.NewGuid(), "Eltse Hall", "America/Chicago", 2026, 8,
             ScheduleStatus.Published, null, null, DateTimeOffset.UtcNow,
             new ScheduleConfigurationDto(1, 6, 3, false, false, false, true), [shift]);
-        var bytes = new SchedulePdfService().Render(schedule, DateTimeOffset.UtcNow);
-        Assert.True(bytes.Length > 500);
+        var directory = new[]
+        {
+            new ResidentAssistantDto(Guid.NewGuid(), "Jordan", "Lee", "JordanLee@wmpenn.edu", "ELTS-09D",
+                "641-555-0101", HallRole.ResidentAssistant, true, 4),
+            new ResidentAssistantDto(Guid.NewGuid(), "Carol", "Ocker", "Carol.Ocker@wmpenn.edu", null,
+                "641-555-0102", HallRole.HallDirector, true)
+        };
+        var bytes = new SchedulePdfService().Render(schedule, directory, DateTimeOffset.UtcNow);
+        Assert.True(bytes.Length > 1_000);
         Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
     }
 

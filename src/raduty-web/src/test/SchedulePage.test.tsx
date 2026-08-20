@@ -26,6 +26,7 @@ describe('Schedule page month boundary', () => {
     render(<MemoryRouter><QueryClientProvider client={client}><ToastProvider><SchedulePage user={raUser} /></ToastProvider></QueryClientProvider></MemoryRouter>)
 
     expect(await screen.findByText('Selection open')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download schedule PDF' })).toBeEnabled()
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(`/api/schedules/${year}/${month}`), expect.anything()))
     expect(screen.queryByRole('button', { name: 'Previous month' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Next month' })).not.toBeInTheDocument()

@@ -76,7 +76,7 @@ export async function signOut(): Promise<void> {
 }
 
 export async function downloadPdf(path: string, filename: string): Promise<void> {
-  const response = await fetch(`${baseUrl}${path}`, { credentials: 'include' })
+  const response = await fetch(`${baseUrl}${path}`, { credentials: 'include', cache: 'no-store' })
   if (!response.ok) {
     let problem: ProblemDetails
     try { problem = await response.json() as ProblemDetails }
