@@ -66,11 +66,9 @@ public sealed class SchedulePdfService : ISchedulePdfService
             });
             row.AutoItem().AlignRight().Column(right =>
             {
-                right.Item().AlignRight().Background(StatusColor(schedule.Status)).PaddingHorizontal(9).PaddingVertical(4)
-                    .Text(StatusLabel(schedule.Status)).SemiBold().FontSize(7.5f).FontColor(StatusTextColor(schedule.Status));
-                right.Item().PaddingTop(5).AlignRight().Text(schedule.PublishedAt is null
-                        ? "Current working schedule"
-                        : $"Published {schedule.PublishedAt:MMM d, yyyy}")
+                right.Item().AlignRight().Background(PrimarySoft).PaddingHorizontal(9).PaddingVertical(4)
+                    .Text("LIVE SCHEDULE").SemiBold().FontSize(7.5f).FontColor(Primary);
+                right.Item().PaddingTop(5).AlignRight().Text("Changes appear immediately")
                     .FontSize(7).FontColor(Muted);
             });
         });
@@ -213,7 +211,7 @@ public sealed class SchedulePdfService : ISchedulePdfService
                 var person = people[index];
                 var background = index % 2 == 0 ? "#FFFFFF" : "#F8FAF8";
                 DirectoryCell(table.Cell(), $"{person.FirstName} {person.LastName}", background, semiBold: true);
-                DirectoryCell(table.Cell(), RoleLabel(person.Role), background);
+                DirectoryCell(table.Cell(), RoleLabel(person), background);
                 DirectoryCell(table.Cell(), person.SchoolEmail, background);
                 DirectoryCell(table.Cell(), string.IsNullOrWhiteSpace(person.RoomNumber) ? "-" : person.RoomNumber, background);
                 DirectoryCell(table.Cell(), string.IsNullOrWhiteSpace(person.PhoneNumber) ? "-" : person.PhoneNumber, background);
@@ -275,31 +273,18 @@ public sealed class SchedulePdfService : ISchedulePdfService
         _ => 3
     };
 
-    private static string RoleLabel(HallRole role) => role switch
+    private static string RoleLabel(ResidentAssistantDto person)
     {
-        HallRole.ResidentAssistant => "Resident Assistant",
-        HallRole.HallDirector => "Hall Director",
-        HallRole.Admin => "Admin",
-        _ => role.ToString()
-    };
+        if (string.Equals(person.SchoolEmail, "CezarPedroso@wmpenn.edu", StringComparison.OrdinalIgnoreCase))
+            return "Resident Assistant";
 
-    private static string StatusLabel(ScheduleStatus status) => status switch
-    {
-        ScheduleStatus.OpenForSelection => "SELECTION OPEN",
-        ScheduleStatus.Closed => "SELECTION CLOSED",
-        _ => status.ToString().ToUpperInvariant()
-    };
+        return person.Role switch
+        {
+            HallRole.ResidentAssistant => "Resident Assistant",
+            HallRole.HallDirector => "Hall Director",
+            HallRole.Admin => "Admin",
+            _ => person.Role.ToString()
+        };
+    }
 
-    private static string StatusColor(ScheduleStatus status) => status switch
-    {
-        ScheduleStatus.Published => Primary,
-        ScheduleStatus.OpenForSelection => "#E8F3ED",
-        ScheduleStatus.Closed => "#EEF1EF",
-        ScheduleStatus.Draft => "#FFF3D7",
-        _ => "#EEF1EF"
-    };
-
-    private static string StatusTextColor(ScheduleStatus status) => status == ScheduleStatus.Published
-        ? Colors.White
-        : status == ScheduleStatus.Draft ? "#7A5715" : Primary;
 }

@@ -91,15 +91,6 @@ h3 { font-size: .95rem; }
 .icon-button { width: 32px; height: 32px; border: 0; background: transparent; display: inline-grid; place-items: center; border-radius: 5px; cursor: pointer; }
 .icon-button:hover { background: rgba(0,0,0,.06); }
 
-.status-banner { min-height: 42px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--line); border-left-width: 3px; background: #fff; color: var(--muted); font-size: .78rem; }
-.status-banner strong { color: var(--ink); white-space: nowrap; }
-.status-banner__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
-.status-banner--OpenForSelection { border-left-color: var(--primary); background: #f8fbf9; }
-.status-banner--Closed, .status-banner--Draft { border-left-color: var(--gold); background: #fffaf1; }
-.status-banner--Closed .status-banner__dot, .status-banner--Draft .status-banner__dot { background: var(--gold); }
-.status-banner--Archived { border-left-color: var(--faint); }
-.status-banner--Published { border-left-color: var(--blue); background: #f7fafc; }
-.status-banner--Published .status-banner__dot { background: var(--blue); }
 .summary-strip { min-height: 82px; display: flex; align-items: stretch; border-bottom: 1px solid var(--line); background: #fbfbf9; }
 .summary-item { min-width: 190px; display: flex; align-items: center; gap: 10px; padding: 17px 22px; border-right: 1px solid var(--line); }
 .summary-item__icon { width: 28px; height: 28px; display: grid; place-items: center; color: var(--primary); }
@@ -255,10 +246,13 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .profile-account-actions .button { justify-content: flex-start; }
 
 .admin-heading { align-items: center; }
-.large-status { padding: 7px 11px; border: 1px solid var(--line-strong); border-radius: 4px; font-size: .7rem; font-weight: 700; }
-.large-status--OpenForSelection { color: var(--primary); border-color: #91b5a2; background: var(--primary-soft); }
-.large-status--Closed, .large-status--Draft { color: #745116; border-color: #d8c18e; background: var(--gold-soft); }
-.large-status--Published { color: var(--blue); border-color: #a4bfcc; background: var(--blue-soft); }
+.admin-month-picker { min-width: 196px; min-height: 46px; display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.admin-month-picker button { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--ink); cursor: pointer; }
+.admin-month-picker button:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary); }
+.admin-month-picker button:disabled { color: var(--faint); cursor: not-allowed; }
+.admin-month-picker > span { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+.admin-month-picker strong { font-size: .82rem; }
+.admin-month-picker small { color: var(--muted); font-size: .68rem; }
 .admin-command-bar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 16px; color: #fff; background: var(--ink); }
 .admin-command-bar > div:first-child { display: grid; }
 .admin-command-bar strong { font-size: .84rem; }
@@ -445,8 +439,6 @@ td a:hover { color: var(--primary); text-decoration: underline; }
   .page-heading { align-items: flex-start; margin-bottom: 22px; }
   .schedule-heading { display: grid; }
   .schedule-toolbar { width: 100%; justify-content: space-between; }
-  .status-banner { align-items: flex-start; flex-wrap: wrap; gap: 7px; }
-  .status-banner > span:last-child { width: calc(100% - 18px); margin-left: 17px; }
   .summary-strip { margin-inline: -16px; }
   .summary-item { padding: 13px 10px; border-bottom: 1px solid var(--line); }
   .summary-item__icon { display: none; }
@@ -474,6 +466,7 @@ td a:hover { color: var(--primary); text-decoration: underline; }
   .form-grid { grid-template-columns: 1fr; }
   .field--wide { grid-column: auto; }
   .admin-heading { flex-direction: column; }
+  .admin-month-picker { width: 100%; }
   .admin-command-bar { display: grid; }
   .admin-command-bar > div:last-child { justify-content: flex-start; }
   .decision-metric { min-height: 80px; padding: 14px; }
@@ -553,10 +546,6 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .schedule-toolbar .button, .month-nav { height: 42px; }
 .month-nav { border-radius: 10px; }
 .month-nav button { min-width: 42px; transition: background .15s ease; }
-.status-banner { min-height: 48px; border: 0; border-radius: 12px; padding: 12px 16px; }
-.status-banner--OpenForSelection { box-shadow: inset 3px 0 0 var(--primary); }
-.status-banner--Closed, .status-banner--Draft { box-shadow: inset 3px 0 0 var(--gold); }
-.status-banner--Published { box-shadow: inset 3px 0 0 var(--blue); }
 .summary-strip { min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; border: 0; background: transparent; }
 .summary-item { min-width: 0; min-height: 76px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 .summary-item:last-child { border-right: 1px solid var(--line); }
@@ -617,9 +606,6 @@ td a:hover { color: var(--primary); text-decoration: underline; }
   .month-nav button:nth-child(2) { width: 100%; }
   .export-button { width: 44px; height: 44px !important; padding: 0; border-radius: 11px; }
   .export-label { display: none; }
-  .status-banner { min-height: 44px; padding: 11px 13px; border-radius: 11px; font-size: .75rem; }
-  .status-banner > span:last-child { display: none; }
-  .status-banner strong { white-space: normal; }
   .summary-strip { grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0 0; }
   .summary-item { min-height: 72px; padding: 10px 7px; display: grid; justify-items: center; align-content: center; gap: 2px; text-align: center; border-radius: 11px; }
   .summary-item__icon { display: none; }
@@ -716,11 +702,6 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .today-link { margin: 4px auto 0; display: block; border: 0; background: none; color: var(--primary); font-size: .7rem; font-weight: 700; cursor: pointer; }
 .simple-schedule-meta { min-height: 52px; margin: 12px 0 14px; padding: 0 4px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: .7rem; }
 .simple-schedule-meta > span:last-child strong { color: var(--ink); }
-.simple-status { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); font-weight: 700; }
-.simple-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
-.simple-status--OpenForSelection i { background: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
-.simple-status--Draft i, .simple-status--Closed i { background: var(--gold); }
-.simple-status--Published i { background: var(--blue); }
 .simple-calendar { display: block !important; border-radius: 14px; box-shadow: 0 0 0 1px var(--line); }
 .simple-calendar .weekday-row { background: #f4f6f4; }
 .simple-calendar .weekday-row > div { padding: 9px 4px; text-align: center; border-right-color: var(--line); font-size: .6rem; }
@@ -818,6 +799,10 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .calendar-page-toolbar { display: grid; grid-template-columns: 44px minmax(140px, 1fr) auto; align-items: center; gap: 12px; }
 .calendar-home-button, .calendar-page-toolbar .quiet-icon-button { width: 42px; height: 42px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--ink); text-decoration: none; }
 .calendar-home-button:hover, .calendar-page-toolbar .quiet-icon-button:hover:not(:disabled) { background: #f0f2f0; }
+.calendar-month-picker { min-width: 0; display: flex; align-items: center; gap: 5px; }
+.calendar-month-step { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; }
+.calendar-month-step:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary); }
+.calendar-month-step:disabled { color: var(--faint); cursor: not-allowed; }
 .calendar-month-title { display: flex; align-items: baseline; gap: 8px; }
 .calendar-month-title strong { font-size: 1.45rem; letter-spacing: -.035em; }
 .calendar-month-title span { color: var(--muted); font-size: .82rem; }
@@ -854,9 +839,9 @@ td a:hover { color: var(--primary); text-decoration: underline; }
   .calendar-page { padding: 0; grid-template-rows: 62px minmax(0, 1fr); }
   .calendar-page-toolbar { padding: 0 10px; grid-template-columns: 42px minmax(0, 1fr) auto; border-bottom: 1px solid var(--line); }
   .calendar-month-title strong { font-size: 1.35rem; }
+  .calendar-month-picker { gap: 1px; }
+  .calendar-month-step { width: 30px; height: 34px; }
   .calendar-toolbar-actions { gap: 8px; }
-  .calendar-toolbar-actions .simple-status { font-size: 0; gap: 0; }
-  .calendar-toolbar-actions .simple-status i { width: 8px; height: 8px; }
   .calendar-shift-count { font-size: .62rem; }
   .schedule-download-button { width: 42px; min-height: 42px; padding: 0; justify-content: center; border: 0; border-radius: 50%; background: transparent; }
   .schedule-download-button span { display: none; }
@@ -876,6 +861,7 @@ td a:hover { color: var(--primary); text-decoration: underline; }
   .calendar-page-toolbar { padding-inline: 6px; gap: 5px; }
   .calendar-month-title strong { font-size: 1.22rem; }
   .calendar-month-title span { font-size: .68rem; }
+  .calendar-month-step { width: 26px; }
   .calendar-shift-count { display: none; }
   .calendar-event { font-size: .6rem; }
 }

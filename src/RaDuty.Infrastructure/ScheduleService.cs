@@ -15,8 +15,7 @@ public sealed class ScheduleService(RaDutyDbContext db, ICurrentUserService curr
         var current = await currentUserService.GetAsync(cancellationToken);
         var period = await PeriodQuery().SingleOrDefaultAsync(x => x.ResidenceHallId == current.ResidenceHallId && x.Year == year && x.Month == month, cancellationToken)
             ?? throw new AppException(404, "SCHEDULE_NOT_FOUND", "No schedule exists for this month.");
-        if (period.Status == ScheduleStatus.Draft && current.Role is not HallRole.HallDirector and not HallRole.Admin)
-            throw new AppException(404, "SCHEDULE_NOT_FOUND", "No schedule exists for this month.");
+        ValidateScheduleWindow(year, month, period.ResidenceHall.TimeZone);
         return period.ToDto(current.Id);
     }
 
@@ -43,10 +42,6 @@ public sealed class ScheduleService(RaDutyDbContext db, ICurrentUserService curr
         var assignment = await db.ShiftAssignments.Include(x => x.DutyShift).ThenInclude(x => x.SchedulePeriod)
             .SingleOrDefaultAsync(x => x.DutyShiftId == shiftId && x.UserId == current.Id && x.RemovedAt == null, cancellationToken)
             ?? throw new AppException(404, "ASSIGNMENT_NOT_FOUND", "You are not assigned to this shift.");
-        var period = assignment.DutyShift.SchedulePeriod;
-        var canRemove = period.Status == ScheduleStatus.OpenForSelection ||
-            (period.Status == ScheduleStatus.Closed && period.AllowSelfRemovalAfterClose);
-        if (!canRemove) throw new AppException(422, "SELF_REMOVAL_NOT_ALLOWED", "Assignments cannot be removed at this schedule stage.");
         assignment.RemovedAt = DateTimeOffset.UtcNow;
         assignment.RemovedByUserId = current.Id;
         db.AuditLogs.Add(Audit(current.Id, "SELF_ASSIGNMENT_REMOVED", "ShiftAssignment", assignment.Id, null, new { assignment.RemovedAt }));
@@ -58,9 +53,10 @@ public sealed class ScheduleService(RaDutyDbContext db, ICurrentUserService curr
         ValidateMonth(year, month);
         ValidateConfiguration(request.RequiredStaffPerShift, request.MaximumShiftsPerUser, request.MaximumWeekendShiftsPerUser);
         var current = await currentUserService.GetAsync(cancellationToken);
+        var hall = await db.ResidenceHalls.SingleAsync(x => x.Id == current.ResidenceHallId, cancellationToken);
+        ValidateScheduleWindow(year, month, hall.TimeZone);
         if (await db.SchedulePeriods.AnyAsync(x => x.ResidenceHallId == current.ResidenceHallId && x.Year == year && x.Month == month, cancellationToken))
             throw new AppException(409, "SCHEDULE_ALREADY_EXISTS", "A schedule already exists for this month.");
-        var hall = await db.ResidenceHalls.SingleAsync(x => x.Id == current.ResidenceHallId, cancellationToken);
         var period = new SchedulePeriod
         {
             ResidenceHall = hall, Year = year, Month = month,
@@ -95,8 +91,6 @@ public sealed class ScheduleService(RaDutyDbContext db, ICurrentUserService curr
         var current = await currentUserService.GetAsync(cancellationToken);
         var period = await PeriodQuery().SingleOrDefaultAsync(x => x.Id == periodId && x.ResidenceHallId == current.ResidenceHallId, cancellationToken)
             ?? throw new AppException(404, "SCHEDULE_NOT_FOUND", "Schedule not found.");
-        if (period.Status is ScheduleStatus.Published or ScheduleStatus.Archived)
-            throw new AppException(422, "SCHEDULE_NOT_EDITABLE", "Published or archived configuration cannot be edited.");
         var before = ConfigurationSnapshot(period);
         period.RequiredStaffPerShift = request.RequiredStaffPerShift;
         period.MaximumShiftsPerUser = request.MaximumShiftsPerUser;
@@ -107,20 +101,6 @@ public sealed class ScheduleService(RaDutyDbContext db, ICurrentUserService curr
         period.FirstComeFirstServed = request.FirstComeFirstServed;
         period.UpdatedAt = DateTimeOffset.UtcNow;
         db.AuditLogs.Add(Audit(current.Id, "SCHEDULE_CONFIGURATION_UPDATED", "SchedulePeriod", period.Id, before, ConfigurationSnapshot(period)));
-        await db.SaveChangesAsync(cancellationToken);
-        return period.ToDto(current.Id);
-    }
-
-    public async Task<ScheduleDto> TransitionAsync(Guid periodId, ScheduleStatus status, CancellationToken cancellationToken)
-    {
-        var current = await currentUserService.GetAsync(cancellationToken);
-        var period = await PeriodQuery().SingleOrDefaultAsync(x => x.Id == periodId && x.ResidenceHallId == current.ResidenceHallId, cancellationToken)
-            ?? throw new AppException(404, "SCHEDULE_NOT_FOUND", "Schedule not found.");
-        if (status == ScheduleStatus.Published && period.Shifts.Any(x => x.Status != ShiftStatus.Cancelled && x.Assignments.Count(a => a.RemovedAt == null) < x.RequiredStaffCount))
-            throw new AppException(422, "SCHEDULE_HAS_UNFILLED_SHIFTS", "Fill or cancel every shift before publishing the schedule.");
-        var before = period.Status;
-        period.TransitionTo(status, DateTimeOffset.UtcNow, current.Id);
-        db.AuditLogs.Add(Audit(current.Id, $"SCHEDULE_{status.ToString().ToUpperInvariant()}", "SchedulePeriod", period.Id, new { Status = before }, new { Status = status }));
         await db.SaveChangesAsync(cancellationToken);
         return period.ToDto(current.Id);
     }
@@ -264,6 +244,15 @@ public sealed class ScheduleService(RaDutyDbContext db, ICurrentUserService curr
     private static void ValidateMonth(int year, int month)
     {
         if (year is < 2020 or > 2200 || month is < 1 or > 12) throw new AppException(400, "INVALID_SCHEDULE_MONTH", "Enter a valid schedule month.");
+    }
+
+    private static void ValidateScheduleWindow(int year, int month, string timeZone)
+    {
+        var localToday = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow,
+            TimeZoneInfo.FindSystemTimeZoneById(timeZone)).DateTime);
+        if (!ScheduleMonthWindow.Contains(year, month, localToday))
+            throw new AppException(400, "SCHEDULE_MONTH_OUT_OF_RANGE",
+                "Schedules are available for the current month and the next two months.");
     }
 
     private static void ValidateConfiguration(int required, int maximum, int weekendMaximum)

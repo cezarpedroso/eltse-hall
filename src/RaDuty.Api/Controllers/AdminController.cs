@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RaDuty.Application;
-using RaDuty.Domain;
 
 namespace RaDuty.Api.Controllers;
 
@@ -18,21 +17,6 @@ public sealed class AdminController(IScheduleService schedules, IUserService use
     [HttpPut("schedules/{schedulePeriodId:guid}")]
     public Task<ScheduleDto> Update(Guid schedulePeriodId, UpdateScheduleRequest request, CancellationToken cancellationToken) =>
         schedules.UpdateAsync(schedulePeriodId, request, cancellationToken);
-
-    [HttpPost("schedules/{schedulePeriodId:guid}/open")]
-    public Task<ScheduleDto> Open(Guid schedulePeriodId, CancellationToken cancellationToken) => Transition(schedulePeriodId, ScheduleStatus.OpenForSelection, cancellationToken);
-
-    [HttpPost("schedules/{schedulePeriodId:guid}/close")]
-    public Task<ScheduleDto> Close(Guid schedulePeriodId, CancellationToken cancellationToken) => Transition(schedulePeriodId, ScheduleStatus.Closed, cancellationToken);
-
-    [HttpPost("schedules/{schedulePeriodId:guid}/draft")]
-    public Task<ScheduleDto> Draft(Guid schedulePeriodId, CancellationToken cancellationToken) => Transition(schedulePeriodId, ScheduleStatus.Draft, cancellationToken);
-
-    [HttpPost("schedules/{schedulePeriodId:guid}/publish")]
-    public Task<ScheduleDto> Publish(Guid schedulePeriodId, CancellationToken cancellationToken) => Transition(schedulePeriodId, ScheduleStatus.Published, cancellationToken);
-
-    [HttpPost("schedules/{schedulePeriodId:guid}/archive")]
-    public Task<ScheduleDto> Archive(Guid schedulePeriodId, CancellationToken cancellationToken) => Transition(schedulePeriodId, ScheduleStatus.Archived, cancellationToken);
 
     [HttpGet("schedules/{schedulePeriodId:guid}/unfilled")]
     public Task<IReadOnlyList<ShiftDto>> Unfilled(Guid schedulePeriodId, CancellationToken cancellationToken) => schedules.GetUnfilledAsync(schedulePeriodId, cancellationToken);
@@ -90,6 +74,4 @@ public sealed class AdminController(IScheduleService schedules, IUserService use
         [FromQuery] int pageSize = 25, CancellationToken cancellationToken = default) =>
         schedules.GetAuditLogsAsync(action, page, pageSize, cancellationToken);
 
-    private Task<ScheduleDto> Transition(Guid id, ScheduleStatus status, CancellationToken cancellationToken) =>
-        schedules.TransitionAsync(id, status, cancellationToken);
 }
