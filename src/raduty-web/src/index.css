@@ -324,6 +324,10 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .state-message svg { color: var(--danger); }
 .state-message h2 { margin: 0 0 5px; }
 .state-message p, .empty-state p { color: var(--muted); font-size: .75rem; margin-bottom: 0; }
+.schedule-start-state { min-height: 240px; align-items: center; }
+.schedule-start-state > svg { color: var(--primary); }
+.schedule-start-state .button { margin-top: 16px; }
+.schedule-start-state .inline-error { margin-top: 10px; color: var(--danger); }
 .empty-state { padding: 32px 10px; text-align: center; color: var(--muted); }
 .empty-state > span { display: block; color: var(--line-strong); font-size: 1.5rem; }
 .empty-state h3 { color: var(--ink); margin: 7px 0 4px; }

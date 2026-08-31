@@ -23,15 +23,15 @@ describe('Role-based navigation and forms', () => {
   it('hides Hall Director navigation from resident assistants', () => {
     render(<MemoryRouter><AppLayout user={raUser}><div>content</div></AppLayout></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }))
-    expect(screen.queryByRole('link', { name: 'Director desk' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Manage' })).not.toBeInTheDocument()
   })
 
   it('shows Hall Director navigation to directors', () => {
     render(<MemoryRouter><AppLayout user={directorUser}><div>content</div></AppLayout></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }))
-    expect(within(screen.getByRole('navigation', { name: 'Mobile navigation' })).getByRole('link', { name: 'Director desk' })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('link', { name: 'People' })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('link', { name: 'Activity' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Mobile navigation' })).getByRole('link', { name: 'Manage' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).queryByRole('link', { name: 'People' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).queryByRole('link', { name: 'Activity' })).not.toBeInTheDocument()
   })
 
   it('shows the full desktop navigation for administrators', () => {
@@ -39,8 +39,9 @@ describe('Role-based navigation and forms', () => {
     const desktopNav = screen.getByRole('navigation', { name: 'Primary navigation' })
     expect(within(desktopNav).getByRole('link', { name: 'Schedule' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Dorm check' })).toBeInTheDocument()
-    expect(within(desktopNav).getByRole('link', { name: 'People' })).toBeInTheDocument()
-    expect(within(desktopNav).getByRole('link', { name: 'Activity' })).toBeInTheDocument()
+    expect(within(desktopNav).getByRole('link', { name: 'Residents' })).toBeInTheDocument()
+    expect(within(desktopNav).getByRole('link', { name: 'Manage' })).toBeInTheDocument()
+    expect(within(desktopNav).queryByRole('link', { name: 'People' })).not.toBeInTheDocument()
   })
 
   it('labels trusted and editable profile fields', () => {
