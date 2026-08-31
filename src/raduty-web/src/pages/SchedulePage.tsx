@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, CalendarPlus, ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { api, downloadPdf, ApiError } from '../api'
 import type { CurrentUser, Schedule, ScheduleSummary } from '../types'
@@ -15,8 +15,18 @@ export function SchedulePage({ user }: { user: CurrentUser }) {
   const [period, setPeriod] = useState(currentPeriod)
   const [exporting, setExporting] = useState(false)
   const toast = useToast()
+  const queryClient = useQueryClient()
   const schedule = useQuery({ queryKey: ['schedule', period.year, period.month], queryFn: ({ signal }) => api<Schedule>(`/api/schedules/${period.year}/${period.month}`, {}, signal) })
   const summary = useQuery({ queryKey: ['summary', period.year, period.month], queryFn: ({ signal }) => api<ScheduleSummary>(`/api/schedules/${period.year}/${period.month}/summary`, {}, signal), enabled: !!schedule.data })
+  const startSchedule = useMutation({
+    mutationFn: () => api<Schedule>(`/api/admin/schedules/${period.year}/${period.month}/generate`, { method: 'POST', body: JSON.stringify({}) }),
+    onSuccess: (createdSchedule) => {
+      queryClient.setQueryData(['schedule', period.year, period.month], createdSchedule)
+      toast(`${monthName(period.month)} schedule started.`)
+    },
+  })
+  const isManager = user.role === 'HallDirector' || user.role === 'Admin'
+  const isMissing = schedule.error instanceof ApiError && schedule.error.problem.code === 'SCHEDULE_NOT_FOUND'
   const canGoBack = compareSchedulePeriods(period, currentPeriod) > 0
   const canGoForward = compareSchedulePeriods(period, latestPeriod) < 0
 
@@ -54,7 +64,8 @@ export function SchedulePage({ user }: { user: CurrentUser }) {
 
     <section className="calendar-stage">
       {schedule.isLoading && <CalendarSkeleton />}
-      {schedule.isError && <ErrorState title={schedule.error instanceof ApiError && schedule.error.problem.code === 'SCHEDULE_NOT_FOUND' ? `No schedule for ${monthName(period.month)} yet` : 'Schedule unavailable'} message={schedule.error instanceof ApiError ? schedule.error.problem.title : 'We could not load this schedule.'} onRetry={() => schedule.refetch()} />}
+      {schedule.isError && isMissing && isManager && <div className="state-message schedule-start-state" role="status"><CalendarPlus /><div><h2>No schedule for {monthName(period.month)} yet</h2><p>Start this month to create the live night-duty calendar for the team.</p><button className="button button--primary" onClick={() => startSchedule.mutate()} disabled={startSchedule.isPending}>{startSchedule.isPending ? 'Starting…' : 'Start schedule'}</button>{startSchedule.isError && <p className="inline-error" role="alert">{startSchedule.error instanceof ApiError ? startSchedule.error.problem.title : 'The schedule could not be started.'}</p>}</div></div>}
+      {schedule.isError && (!isMissing || !isManager) && <ErrorState title={isMissing ? `No schedule for ${monthName(period.month)} yet` : 'Schedule unavailable'} message={schedule.error instanceof ApiError ? schedule.error.problem.title : 'We could not load this schedule.'} onRetry={() => schedule.refetch()} />}
       {schedule.data && <>
         <p className="calendar-help">{user.role === 'ResidentAssistant' ? 'Tap a day to see the assigned team or change your own shift.' : 'Tap a day to assign or unassign night-duty coverage.'}</p>
         <ScheduleCalendar schedule={schedule.data} user={user} />
