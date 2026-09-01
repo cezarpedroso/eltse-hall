@@ -4,19 +4,15 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../components/ui'
 import { AdminDashboardPage } from '../pages/AdminPages'
-import { makeSchedule } from './fixtures'
+import { makeSchedule, raUser } from './fixtures'
 
 describe('Hall Director schedule desk', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('uses live schedules and supports the current month plus two months ahead', async () => {
+  it('focuses on managing RAs and supports schedules two months ahead', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
-      const body = url.includes('/unfilled') || url.includes('/distribution')
-        ? []
-        : url.includes('/audit-logs')
-          ? { items: [], page: 1, pageSize: 6, total: 0 }
-          : makeSchedule()
+      const body = url.includes('/admin/users') ? [{ ...raUser, shiftCount: 2 }] : makeSchedule()
       return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     })
     vi.stubGlobal('fetch', fetchMock)
@@ -24,9 +20,12 @@ describe('Hall Director schedule desk', () => {
 
     render(<MemoryRouter><QueryClientProvider client={client}><ToastProvider><AdminDashboardPage /></ToastProvider></QueryClientProvider></MemoryRouter>)
 
-    expect(await screen.findByText('Live schedule')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /publish schedule/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /draft/i })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Manage Eltse Hall' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'RA team' })).toBeInTheDocument()
+    expect(await screen.findByText('Jordan Lee')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Manage RAs/i })).toHaveAttribute('href', '/admin/users')
+    expect(screen.queryByText('Assignment distribution')).not.toBeInTheDocument()
+    expect(screen.queryByText('Weekend assignments')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Previous month' })).toBeDisabled()
 
     fireEvent.click(screen.getByRole('button', { name: 'Next month' }))
