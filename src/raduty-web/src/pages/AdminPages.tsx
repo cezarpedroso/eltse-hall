@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, ContactRound, Copy, FileSpreadsheet, Filter, KeyRound, Mail, MapPin, Phone, Search, Trash2, UserPlus, UsersRound } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Copy, FileSpreadsheet, Filter, KeyRound, Mail, MapPin, Phone, Search, Trash2, UserPlus, UsersRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import type { AuditLog, CurrentUser, HallRole, PagedResult, ProvisionedAccount, ResidentAssistant, Schedule, TemporaryPassword } from '../types'
@@ -10,7 +10,8 @@ import { addScheduleMonths, compareSchedulePeriods, currentSchedulePeriod, month
 
 export function AdminDashboardPage() {
   const currentPeriod = currentSchedulePeriod(); const latestPeriod = addScheduleMonths(currentPeriod, 2)
-  const [period, setPeriod] = useState(currentPeriod)
+  const [period, setPeriod] = useState(currentPeriod); const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
   const queryClient = useQueryClient(); const toast = useToast()
   const schedule = useQuery({ queryKey: ['schedule', period.year, period.month], queryFn: ({ signal }) => api<Schedule>(`/api/schedules/${period.year}/${period.month}`, {}, signal) })
   const generate = useMutation({ mutationFn: () => api<Schedule>(`/api/admin/schedules/${period.year}/${period.month}/generate`, { method: 'POST', body: JSON.stringify({}) }), onSuccess: async () => { toast('Monthly shifts are live.'); await queryClient.invalidateQueries({ queryKey: ['schedule', period.year, period.month] }) } })
@@ -20,32 +21,24 @@ export function AdminDashboardPage() {
   const changeMonth = (offset: number) => setPeriod(addScheduleMonths(period, offset))
   const missingSchedule = schedule.error instanceof ApiError && schedule.error.problem.code === 'SCHEDULE_NOT_FOUND'
   const ras = people.data?.filter((person) => person.role === 'ResidentAssistant') ?? []
-  return <div className="page page--admin manage-page">
-    <div className="page-heading"><div><span className="eyebrow">Hall management</span><h1>Manage Eltse Hall</h1><p>Keep the RA team, resident roster, and upcoming schedules organized.</p></div></div>
+  const visibleRas = ras.filter((ra) => `${ra.firstName} ${ra.lastName} ${ra.schoolEmail} ${ra.roomNumber ?? ''}`.toLowerCase().includes(deferredSearch.toLowerCase()))
+  return <div className="page page--narrow manage-page">
+    <div className="page-heading people-heading"><div><span className="eyebrow">Hall management</span><h1>Resident Assistants</h1><p>Manage the Eltse Hall team and their contact information.</p></div><div className="manage-heading-actions"><Link className="button button--primary" to="/admin/users"><UsersRound size={17} />Manage RAs</Link><Link className="button button--quiet" to="/admin/residents"><FileSpreadsheet size={17} />Import residents</Link><Link className="button button--quiet" to="/admin/audit"><ClipboardList size={17} />Activity</Link></div></div>
 
-    <nav className="manage-shortcuts" aria-label="Management tools">
-      <Link to="/admin/users"><UsersRound /><span><strong>People</strong><small>Add RAs, change roles, reset passwords</small></span></Link>
-      <Link to="/admin/residents"><FileSpreadsheet /><span><strong>Import roster</strong><small>Update residents from Excel</small></span></Link>
-      <Link to="/directory"><ContactRound /><span><strong>RA directory</strong><small>View contact information</small></span></Link>
-      <Link to="/admin/audit"><ClipboardList /><span><strong>Activity</strong><small>Review important changes</small></span></Link>
-    </nav>
-
-    <section className="manage-panel manage-schedule-panel">
-      <div className="manage-panel-heading"><div><span className="eyebrow">Night duty</span><h2>Schedule setup</h2><p>Start or open schedules for the current month and the next two months.</p></div><MonthWindowPicker period={period} canGoBack={canGoBack} canGoForward={canGoForward} onChange={changeMonth} /></div>
-      {schedule.isLoading && <div className="skeleton skeleton--panel" aria-label="Loading schedule" />}
-      {missingSchedule && <div className="schedule-management-state"><CalendarDays /><div><strong>{monthName(period.month)} has not been started</strong><span>Create the live calendar so RAs can select shifts.</span></div><button className="button button--primary" onClick={() => generate.mutate()} disabled={generate.isPending}>{generate.isPending ? 'Starting…' : 'Start schedule'}</button></div>}
-      {schedule.isError && !missingSchedule && <ErrorState title="Schedule unavailable" message={schedule.error instanceof ApiError ? schedule.error.problem.title : 'The selected schedule could not be loaded.'} onRetry={() => schedule.refetch()} />}
-      {schedule.data && <div className="schedule-management-state is-ready"><CheckCircle2 /><div><strong>{monthName(period.month)} schedule is ready</strong><span>{schedule.data.shifts.length} nights are available to the team.</span></div><Link className="button button--primary" to="/schedule">Open schedule</Link></div>}
-      {generate.isError && <p className="inline-error" role="alert">{generate.error instanceof ApiError ? generate.error.problem.title : 'The schedule could not be started.'}</p>}
+    <section className="manage-schedule-row" aria-label="Schedule setup">
+      <div className="manage-schedule-copy">{schedule.data ? <CheckCircle2 /> : <CalendarDays />}<span><strong>{monthName(period.month)} schedule</strong><small>{schedule.isLoading ? 'Checking schedule…' : schedule.data ? `${schedule.data.shifts.length} nights ready` : missingSchedule ? 'Not started' : 'Unavailable'}</small></span></div>
+      <MonthWindowPicker period={period} canGoBack={canGoBack} canGoForward={canGoForward} onChange={changeMonth} />
+      {missingSchedule && <button className="button button--primary" onClick={() => generate.mutate()} disabled={generate.isPending}>{generate.isPending ? 'Starting…' : 'Start schedule'}</button>}
+      {schedule.data && <Link className="button button--quiet" to="/schedule">Open schedule</Link>}
+      {schedule.isError && !missingSchedule && <button className="button button--quiet" onClick={() => schedule.refetch()}>Try again</button>}
     </section>
+    {generate.isError && <p className="inline-error" role="alert">{generate.error instanceof ApiError ? generate.error.problem.title : 'The schedule could not be started.'}</p>}
 
-    <section className="manage-panel ra-team-panel">
-      <div className="manage-panel-heading"><div><span className="eyebrow">Staff</span><h2>RA team</h2><p>Quickly review each RA’s room, contact details, and account status.</p></div><Link className="button button--quiet" to="/admin/users"><UserPlus size={16} />Manage RAs</Link></div>
-      {people.isLoading && <div className="table-skeleton">{Array.from({ length: 4 }, (_, index) => <div className="skeleton skeleton--row" key={index} />)}</div>}
-      {people.isError && <ErrorState title="RA team unavailable" message="The staff list could not be loaded." onRetry={() => people.refetch()} />}
-      {people.data && !ras.length && <EmptyState title="No resident assistants yet" message="Add an RA account to start building the hall team." />}
-      {!!ras.length && <div className="ra-management-list">{ras.map((ra) => <article key={ra.id} className={!ra.isActive ? 'is-inactive' : ''}><span className="avatar">{ra.firstName[0]}{ra.lastName[0]}</span><div className="ra-management-name"><strong>{ra.firstName} {ra.lastName}</strong><a href={`mailto:${ra.schoolEmail}`}><Mail size={14} />{ra.schoolEmail}</a></div><span><MapPin size={15} />Room {ra.roomNumber ?? 'not listed'}</span><span>{ra.phoneNumber ? <a href={`tel:${ra.phoneNumber}`}><Phone size={15} />{ra.phoneNumber}</a> : <><Phone size={15} />No phone listed</>}</span><b className={`active-state ${ra.isActive ? 'is-active' : ''}`}>{ra.isActive ? 'Active' : 'Inactive'}</b></article>)}</div>}
-    </section>
+    <div className="directory-toolbar"><label className="search-field"><Search size={18} /><span className="sr-only">Search resident assistants</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or room" /></label><span>{visibleRas.length} RAs</span></div>
+    {people.isLoading && <div className="table-skeleton">{Array.from({ length: 5 }, (_, index) => <div className="skeleton skeleton--row" key={index} />)}</div>}
+    {people.isError && <ErrorState title="RA directory unavailable" message="The staff list could not be loaded." onRetry={() => people.refetch()} />}
+    {people.data && !visibleRas.length && <EmptyState title={search ? 'No matching RAs' : 'No resident assistants yet'} message={search ? 'Try a different name or room number.' : 'Add an RA account to start building the hall team.'} />}
+    {!!visibleRas.length && <div className="responsive-table manage-ra-table"><table><caption className="sr-only">Resident assistant management directory</caption><thead><tr><th>Name</th><th>Room</th><th>Phone</th><th>Email</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{visibleRas.map((ra) => <tr key={ra.id} className={!ra.isActive ? 'row-inactive' : ''}><td data-label="Name"><span className="person-cell"><span className="avatar">{ra.firstName[0]}{ra.lastName[0]}</span><strong>{ra.firstName} {ra.lastName}</strong></span></td><td data-label="Room"><span className="with-icon"><MapPin size={15} />{ra.roomNumber ?? 'Not listed'}</span></td><td data-label="Phone">{ra.phoneNumber ? <a className="with-icon" href={`tel:${ra.phoneNumber}`}><Phone size={15} />{ra.phoneNumber}</a> : 'Not listed'}</td><td data-label="Email"><a className="with-icon" href={`mailto:${ra.schoolEmail}`}><Mail size={15} />{ra.schoolEmail}</a></td><td data-label="Status"><span className={`active-state ${ra.isActive ? 'is-active' : ''}`}>{ra.isActive ? 'Active' : 'Inactive'}</span></td><td data-label="Actions"><Link className="text-link" to="/admin/users">Edit</Link></td></tr>)}</tbody></table></div>}
   </div>
 }
 

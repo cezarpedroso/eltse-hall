@@ -20,8 +20,8 @@ describe('Hall Director schedule desk', () => {
 
     render(<MemoryRouter><QueryClientProvider client={client}><ToastProvider><AdminDashboardPage /></ToastProvider></QueryClientProvider></MemoryRouter>)
 
-    expect(await screen.findByRole('heading', { name: 'Manage Eltse Hall' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'RA team' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Resident Assistants' })).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Search by name or room')).toBeInTheDocument()
     expect(await screen.findByText('Jordan Lee')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Manage RAs/i })).toHaveAttribute('href', '/admin/users')
     expect(screen.queryByText('Assignment distribution')).not.toBeInTheDocument()
