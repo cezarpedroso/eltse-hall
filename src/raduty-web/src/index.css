@@ -253,33 +253,16 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .admin-month-picker > span { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
 .admin-month-picker strong { font-size: .82rem; }
 .admin-month-picker small { color: var(--muted); font-size: .68rem; }
-.manage-page { width: min(1180px, 100%); }
-.manage-shortcuts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
-.manage-shortcuts > a { min-width: 0; min-height: 88px; padding: 16px; display: flex; align-items: flex-start; gap: 12px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); transition: border-color .15s ease, transform .15s ease; }
-.manage-shortcuts > a:hover { border-color: #91a99c; transform: translateY(-1px); }
-.manage-shortcuts > a > svg { flex: 0 0 auto; width: 21px; color: var(--primary); }
-.manage-shortcuts > a > span { min-width: 0; display: grid; }
-.manage-shortcuts strong { font-size: .82rem; }
-.manage-shortcuts small { margin-top: 4px; color: var(--muted); font-size: .68rem; line-height: 1.35; }
-.manage-panel { margin-top: 18px; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
-.manage-panel-heading { margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.manage-panel-heading h2 { margin-bottom: 4px; }
-.manage-panel-heading p { margin: 0; color: var(--muted); font-size: .76rem; }
-.schedule-management-state { min-height: 82px; padding: 14px 16px; display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 14px; border-radius: 10px; background: var(--gold-soft); }
-.schedule-management-state.is-ready { background: var(--primary-soft); }
-.schedule-management-state > svg { color: var(--gold); }
-.schedule-management-state.is-ready > svg { color: var(--primary); }
-.schedule-management-state > div { display: grid; }
-.schedule-management-state strong { font-size: .82rem; }
-.schedule-management-state span { margin-top: 3px; color: var(--muted); font-size: .7rem; }
-.manage-schedule-panel > .inline-error { margin: 12px 0 0; }
-.ra-management-list { border-top: 1px solid var(--line); }
-.ra-management-list article { min-height: 70px; padding: 10px 4px; display: grid; grid-template-columns: 38px minmax(200px, 1.5fr) minmax(115px, .75fr) minmax(150px, 1fr) auto; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); font-size: .72rem; }
-.ra-management-list article.is-inactive { opacity: .58; }
-.ra-management-list article > span:not(.avatar), .ra-management-list article > span a, .ra-management-name a { min-width: 0; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; overflow-wrap: anywhere; }
-.ra-management-name { min-width: 0; display: grid; gap: 3px; }
-.ra-management-name strong { font-size: .78rem; }
-.ra-management-name a:hover, .ra-management-list article > span a:hover { color: var(--primary); }
+.manage-page { width: min(1260px, 100%); }
+.manage-heading-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.manage-schedule-row { min-height: 68px; margin-bottom: 24px; padding: 10px 12px; display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.manage-schedule-copy { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.manage-schedule-copy > svg { flex: 0 0 auto; color: var(--primary); }
+.manage-schedule-copy > span { display: grid; }
+.manage-schedule-copy strong { font-size: .8rem; }
+.manage-schedule-copy small { color: var(--muted); font-size: .68rem; }
+.manage-ra-table { background: var(--paper); }
+.manage-ra-table td:last-child { text-align: right; }
 .admin-command-bar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 16px; color: #fff; background: var(--ink); }
 .admin-command-bar > div:first-child { display: grid; }
 .admin-command-bar strong { font-size: .84rem; }
@@ -462,9 +445,9 @@ td a:hover { color: var(--primary); text-decoration: underline; }
   .signin-context { display: none; }
   .signin-panel { min-height: 100vh; }
   .people-heading { align-items: stretch; }
-  .manage-shortcuts { grid-template-columns: repeat(2, 1fr); }
-  .ra-management-list article { grid-template-columns: 38px 1fr auto; }
-  .ra-management-list article > span:not(.avatar) { grid-column: 2 / -1; }
+  .manage-heading-actions { justify-content: flex-start; }
+  .manage-schedule-row { grid-template-columns: minmax(160px, 1fr) auto; }
+  .manage-schedule-row > .button { grid-column: 1 / -1; }
 }
 
 @media (max-width: 700px) {
@@ -501,12 +484,11 @@ td a:hover { color: var(--primary); text-decoration: underline; }
   .field--wide { grid-column: auto; }
   .admin-heading { flex-direction: column; }
   .admin-month-picker { width: 100%; }
-  .manage-panel { padding: 18px 15px; }
-  .manage-panel-heading { align-items: stretch; flex-direction: column; gap: 14px; }
-  .schedule-management-state { grid-template-columns: 28px 1fr; }
-  .schedule-management-state .button { grid-column: 1 / -1; width: 100%; }
-  .manage-shortcuts { grid-template-columns: 1fr; gap: 8px; }
-  .manage-shortcuts > a { min-height: 72px; }
+  .manage-heading-actions { width: 100%; }
+  .manage-heading-actions .button { flex: 1 1 145px; }
+  .manage-schedule-row { grid-template-columns: 1fr; }
+  .manage-schedule-row > .button { width: 100%; }
+  .manage-ra-table td:last-child { text-align: left; }
   .admin-command-bar { display: grid; }
   .admin-command-bar > div:last-child { justify-content: flex-start; }
   .decision-metric { min-height: 80px; padding: 14px; }
