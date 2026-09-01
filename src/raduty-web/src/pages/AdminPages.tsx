@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, ContactRound, Copy, FileSpreadsheet, Filter, KeyRound, Search, Trash2, UserPlus, UsersRound } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, ContactRound, Copy, FileSpreadsheet, Filter, KeyRound, Mail, MapPin, Phone, Search, Trash2, UserPlus, UsersRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { api, ApiError } from '../api'
-import type { AuditLog, CurrentUser, Distribution, HallRole, PagedResult, ProvisionedAccount, ResidentAssistant, Schedule, Shift, TemporaryPassword } from '../types'
+import type { AuditLog, CurrentUser, HallRole, PagedResult, ProvisionedAccount, ResidentAssistant, Schedule, TemporaryPassword } from '../types'
 import { Dialog, EmptyState, ErrorState } from '../components/ui'
 import { useToast } from '../components/toast'
 import { addScheduleMonths, compareSchedulePeriods, currentSchedulePeriod, monthName, type SchedulePeriod } from '../scheduleFormat'
@@ -14,29 +14,38 @@ export function AdminDashboardPage() {
   const queryClient = useQueryClient(); const toast = useToast()
   const schedule = useQuery({ queryKey: ['schedule', period.year, period.month], queryFn: ({ signal }) => api<Schedule>(`/api/schedules/${period.year}/${period.month}`, {}, signal) })
   const generate = useMutation({ mutationFn: () => api<Schedule>(`/api/admin/schedules/${period.year}/${period.month}/generate`, { method: 'POST', body: JSON.stringify({}) }), onSuccess: async () => { toast('Monthly shifts are live.'); await queryClient.invalidateQueries({ queryKey: ['schedule', period.year, period.month] }) } })
-  const unfilled = useQuery({ queryKey: ['admin', 'unfilled', schedule.data?.id], queryFn: ({ signal }) => api<Shift[]>(`/api/admin/schedules/${schedule.data?.id}/unfilled`, {}, signal), enabled: !!schedule.data })
-  const distribution = useQuery({ queryKey: ['admin', 'distribution', schedule.data?.id], queryFn: ({ signal }) => api<Distribution[]>(`/api/admin/schedules/${schedule.data?.id}/distribution`, {}, signal), enabled: !!schedule.data })
-  const activity = useQuery({ queryKey: ['admin', 'audit', 1], queryFn: ({ signal }) => api<PagedResult<AuditLog>>('/api/admin/audit-logs?page=1&pageSize=6', {}, signal) })
+  const people = useQuery({ queryKey: ['admin', 'users'], queryFn: ({ signal }) => api<ResidentAssistant[]>('/api/admin/users', {}, signal) })
   const canGoBack = compareSchedulePeriods(period, currentPeriod) > 0
   const canGoForward = compareSchedulePeriods(period, latestPeriod) < 0
   const changeMonth = (offset: number) => setPeriod(addScheduleMonths(period, offset))
-  if (schedule.isLoading) return <div className="page"><div className="skeleton skeleton--title" /><div className="admin-skeleton"><div className="skeleton" /><div className="skeleton" /></div></div>
-  if (schedule.isError) {
-    const missing = schedule.error instanceof ApiError && schedule.error.problem.code === 'SCHEDULE_NOT_FOUND'
-    return <div className="page"><div className="page-heading admin-heading"><div><span className="eyebrow">Hall Director desk</span><h1>{monthName(period.month)} schedule operations</h1><p>Manage the current month or prepare coverage up to two months ahead.</p></div><MonthWindowPicker period={period} canGoBack={canGoBack} canGoForward={canGoForward} onChange={changeMonth} /></div>{missing ? <div className="state-message"><div><h2>No schedule exists for {monthName(period.month)}</h2><p>Generate one night-duty shift for each date. The calendar becomes visible to the team immediately.</p><button className="button button--primary" onClick={() => generate.mutate()} disabled={generate.isPending}>{generate.isPending ? 'Generating…' : 'Generate live schedule'}</button>{generate.isError && <p className="inline-error" role="alert">{generate.error instanceof ApiError ? generate.error.problem.title : 'The schedule could not be generated.'}</p>}</div></div> : <ErrorState title="Director desk unavailable" message={schedule.error instanceof ApiError ? schedule.error.problem.title : 'The selected schedule could not be loaded.'} />}</div>
-  }
-  if (!schedule.data) return null
-  const below = distribution.data?.filter((x) => x.balance === 'Below target') ?? []
-  const atLimit = distribution.data?.filter((x) => x.balance === 'At limit') ?? []
-  return <div className="page page--admin">
-    <div className="page-heading admin-heading"><div><span className="eyebrow">Hall Director desk</span><h1>{monthName(period.month)} schedule operations</h1><p>{schedule.data.residenceHallName} · Every saved assignment is visible immediately.</p></div><MonthWindowPicker period={period} canGoBack={canGoBack} canGoForward={canGoForward} onChange={changeMonth} /></div>
-    <div className="admin-command-bar"><div><strong>Live schedule</strong><span>Changes are immediate. Other management tools are grouped here.</span></div><div className="admin-tool-links"><Link to="/admin/users" className="button button--quiet"><UsersRound size={16} />People</Link><Link to="/admin/residents" className="button button--quiet"><FileSpreadsheet size={16} />Import roster</Link><Link to="/directory" className="button button--quiet"><ContactRound size={16} />RA directory</Link><Link to="/admin/audit" className="button button--quiet"><ClipboardList size={16} />Activity</Link></div></div>
-    <div className="decision-strip"><DecisionMetric value={unfilled.data?.length ?? '—'} label="Unfilled nights" tone={unfilled.data?.length ? 'danger' : 'good'} detail={unfilled.data?.length ? 'Needs attention' : 'Coverage complete'} /><DecisionMetric value={below.length} label="RAs below target" tone={below.length ? 'warning' : 'good'} detail="Balance coverage" /><DecisionMetric value={atLimit.length} label="RAs at limit" detail={`Max ${schedule.data.configuration.maximumShiftsPerUser} shifts`} /><DecisionMetric value={distribution.data?.reduce((sum, row) => sum + row.weekendShifts, 0) ?? '—'} label="Weekend assignments" detail="Friday and Saturday" /></div>
-    <div className="admin-grid"><section className="admin-section distribution-section"><div className="section-heading"><div><span className="eyebrow">Coverage balance</span><h2>Assignment distribution</h2></div><a href="/admin/users" className="text-link">Manage people</a></div>
-      {distribution.data?.length ? <div className="distribution-list">{distribution.data.map((row) => <div className="distribution-row" key={row.userId}><span className="avatar">{initials(row.name)}</span><strong>{row.name}</strong><span className={`balance balance--${row.balance.replace(' ', '-').toLowerCase()}`}>{row.balance === 'Below target' ? <ArrowDown size={14} /> : row.balance === 'At limit' ? <ArrowUp size={14} /> : <CheckCircle2 size={14} />}{row.balance}</span><span><b>{row.totalShifts}</b> total</span><span><b>{row.weekendShifts}</b> weekend</span></div>)}</div> : <EmptyState title="No active RAs" message="Activate resident assistants before assigning coverage." />}</section>
-      <aside className="admin-section attention-section"><div className="section-heading"><div><span className="eyebrow">Priority queue</span><h2>Unfilled nights</h2></div><span>{unfilled.data?.length ?? 0}</span></div>{unfilled.data?.length ? <ol>{unfilled.data.slice(0, 8).map((shift) => <li key={shift.id}><time>{new Date(`${shift.dutyDate}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</time><span>{shift.requiredStaffCount - shift.assignments.length} opening</span></li>)}</ol> : <div className="coverage-complete"><CheckCircle2 /><strong>Every night is covered</strong><p>No staffing gaps remain this month.</p></div>}</aside>
-    </div>
-    <section className="activity-section"><div className="section-heading"><div><span className="eyebrow">Accountability</span><h2>Recent administrative activity</h2></div><Link to="/admin/audit" className="text-link">View full history</Link></div><div className="activity-list">{activity.data?.items.map((item) => <div key={item.id}><span className="activity-dot" /><time>{new Date(item.occurredAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time><p><strong>{item.actor}</strong> {readableAction(item.action)}</p><small>{item.entityType}</small></div>)}</div></section>
+  const missingSchedule = schedule.error instanceof ApiError && schedule.error.problem.code === 'SCHEDULE_NOT_FOUND'
+  const ras = people.data?.filter((person) => person.role === 'ResidentAssistant') ?? []
+  return <div className="page page--admin manage-page">
+    <div className="page-heading"><div><span className="eyebrow">Hall management</span><h1>Manage Eltse Hall</h1><p>Keep the RA team, resident roster, and upcoming schedules organized.</p></div></div>
+
+    <nav className="manage-shortcuts" aria-label="Management tools">
+      <Link to="/admin/users"><UsersRound /><span><strong>People</strong><small>Add RAs, change roles, reset passwords</small></span></Link>
+      <Link to="/admin/residents"><FileSpreadsheet /><span><strong>Import roster</strong><small>Update residents from Excel</small></span></Link>
+      <Link to="/directory"><ContactRound /><span><strong>RA directory</strong><small>View contact information</small></span></Link>
+      <Link to="/admin/audit"><ClipboardList /><span><strong>Activity</strong><small>Review important changes</small></span></Link>
+    </nav>
+
+    <section className="manage-panel manage-schedule-panel">
+      <div className="manage-panel-heading"><div><span className="eyebrow">Night duty</span><h2>Schedule setup</h2><p>Start or open schedules for the current month and the next two months.</p></div><MonthWindowPicker period={period} canGoBack={canGoBack} canGoForward={canGoForward} onChange={changeMonth} /></div>
+      {schedule.isLoading && <div className="skeleton skeleton--panel" aria-label="Loading schedule" />}
+      {missingSchedule && <div className="schedule-management-state"><CalendarDays /><div><strong>{monthName(period.month)} has not been started</strong><span>Create the live calendar so RAs can select shifts.</span></div><button className="button button--primary" onClick={() => generate.mutate()} disabled={generate.isPending}>{generate.isPending ? 'Starting…' : 'Start schedule'}</button></div>}
+      {schedule.isError && !missingSchedule && <ErrorState title="Schedule unavailable" message={schedule.error instanceof ApiError ? schedule.error.problem.title : 'The selected schedule could not be loaded.'} onRetry={() => schedule.refetch()} />}
+      {schedule.data && <div className="schedule-management-state is-ready"><CheckCircle2 /><div><strong>{monthName(period.month)} schedule is ready</strong><span>{schedule.data.shifts.length} nights are available to the team.</span></div><Link className="button button--primary" to="/schedule">Open schedule</Link></div>}
+      {generate.isError && <p className="inline-error" role="alert">{generate.error instanceof ApiError ? generate.error.problem.title : 'The schedule could not be started.'}</p>}
+    </section>
+
+    <section className="manage-panel ra-team-panel">
+      <div className="manage-panel-heading"><div><span className="eyebrow">Staff</span><h2>RA team</h2><p>Quickly review each RA’s room, contact details, and account status.</p></div><Link className="button button--quiet" to="/admin/users"><UserPlus size={16} />Manage RAs</Link></div>
+      {people.isLoading && <div className="table-skeleton">{Array.from({ length: 4 }, (_, index) => <div className="skeleton skeleton--row" key={index} />)}</div>}
+      {people.isError && <ErrorState title="RA team unavailable" message="The staff list could not be loaded." onRetry={() => people.refetch()} />}
+      {people.data && !ras.length && <EmptyState title="No resident assistants yet" message="Add an RA account to start building the hall team." />}
+      {!!ras.length && <div className="ra-management-list">{ras.map((ra) => <article key={ra.id} className={!ra.isActive ? 'is-inactive' : ''}><span className="avatar">{ra.firstName[0]}{ra.lastName[0]}</span><div className="ra-management-name"><strong>{ra.firstName} {ra.lastName}</strong><a href={`mailto:${ra.schoolEmail}`}><Mail size={14} />{ra.schoolEmail}</a></div><span><MapPin size={15} />Room {ra.roomNumber ?? 'not listed'}</span><span>{ra.phoneNumber ? <a href={`tel:${ra.phoneNumber}`}><Phone size={15} />{ra.phoneNumber}</a> : <><Phone size={15} />No phone listed</>}</span><b className={`active-state ${ra.isActive ? 'is-active' : ''}`}>{ra.isActive ? 'Active' : 'Inactive'}</b></article>)}</div>}
+    </section>
   </div>
 }
 
@@ -87,8 +96,6 @@ export function AuditLogPage() {
     {audit.isError && <ErrorState message="Audit history could not be loaded." />}{audit.data && !audit.data.items.length && <EmptyState title="No activity found" message="Try a broader action filter." />}{audit.data?.items.length ? <div className="audit-table responsive-table"><table><thead><tr><th>Date and time</th><th>Actor</th><th>Action</th><th>Affected record</th><th>Change summary</th></tr></thead><tbody>{audit.data.items.map((item) => <tr key={item.id}><td data-label="Date"><time>{new Date(item.occurredAt).toLocaleString()}</time></td><td data-label="Actor"><strong>{item.actor}</strong></td><td data-label="Action">{readableAction(item.action)}</td><td data-label="Record"><span>{item.entityType}</span><small>{item.entityId.slice(0, 8)}…</small></td><td data-label="Summary"><details><summary>Before and after</summary><pre>{summaryJson(item.before, item.after)}</pre></details></td></tr>)}</tbody></table><div className="pagination"><button className="button button--quiet" disabled={page === 1} onClick={() => setPage((value) => value - 1)}>Previous</button><span>Page {page} of {Math.max(1, Math.ceil(audit.data.total / audit.data.pageSize))}</span><button className="button button--quiet" disabled={page * audit.data.pageSize >= audit.data.total} onClick={() => setPage((value) => value + 1)}>Next</button></div></div> : null}</div>
 }
 
-function DecisionMetric({ value, label, detail, tone = 'neutral' }: { value: string | number; label: string; detail: string; tone?: string }) { return <div className={`decision-metric decision-metric--${tone}`}><strong>{value}</strong><span>{label}<small>{detail}</small></span></div> }
-function initials(name: string) { return name.split(' ').map((part) => part[0]).slice(0, 2).join('') }
 function readableAction(action: string) { return action.toLowerCase().replaceAll('_', ' ') }
 function summaryJson(before?: string, after?: string) { try { return `Before\n${before ? JSON.stringify(JSON.parse(before), null, 2) : '—'}\n\nAfter\n${after ? JSON.stringify(JSON.parse(after), null, 2) : '—'}` } catch { return 'Change details unavailable.' } }
 function roleLabel(role: 'ResidentAssistant' | 'HallDirector' | 'Admin') { return role === 'Admin' ? 'Administrator' : role === 'HallDirector' ? 'Hall Director' : 'Resident Assistant' }
