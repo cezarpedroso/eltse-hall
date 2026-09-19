@@ -85,6 +85,16 @@ public sealed record DormCheckPhotoUpload(string FileName, string ContentType, l
 public sealed record DormCheckPhotoDto(Guid Id, string FileName, string ContentType, long SizeBytes, DateTimeOffset UploadedAt);
 public sealed record DormCheckPhotoContentDto(byte[] Content, string ContentType, string FileName);
 public sealed record DormCheckResetDto(int DeletedChecks, int DeletedPhotos);
+public sealed record DormSuiteSweepSummaryDto(Guid Id, Guid CheckedByUserId, string CheckedByName,
+    DateTimeOffset CheckedAt, bool HasConcerns);
+public sealed record DormSweepSuiteDto(string SuiteNumber, DormSuiteSweepSummaryDto? LatestSweep);
+public sealed record DormSuiteSweepDto(Guid Id, string SuiteNumber, Guid CheckedByUserId, string CheckedByName,
+    DateTimeOffset CheckedAt, bool HasTrashInCommonArea, bool HasTrashInBathroom,
+    bool HasFurnitureMovedToCommonArea, bool HasBathroomIssue, bool HasCommonAreaDamage,
+    bool NeedsFollowUp, string? Notes, bool HasConcerns);
+public sealed record SubmitDormSuiteSweepRequest(bool HasTrashInCommonArea, bool HasTrashInBathroom,
+    bool HasFurnitureMovedToCommonArea, bool HasBathroomIssue, bool HasCommonAreaDamage,
+    bool NeedsFollowUp, string? Notes);
 public sealed record DormRosterWorkbookUpload(string FileName, long Length, Stream Content);
 public sealed record DormRosterImportIssueDto(int? RowNumber, string Message);
 public sealed record DormRosterChangeDto(string Type, string FirstName, string LastName, string? FromRoom, string? ToRoom);
@@ -163,6 +173,12 @@ public interface IDormCheckPhotoService
 {
     Task<IReadOnlyList<DormCheckPhotoDto>> AddAsync(Guid checkId, IReadOnlyList<DormCheckPhotoUpload> photos, CancellationToken cancellationToken);
     Task<DormCheckPhotoContentDto> GetAsync(Guid photoId, CancellationToken cancellationToken);
+}
+
+public interface IDormSweepService
+{
+    Task<IReadOnlyList<DormSweepSuiteDto>> GetSuitesAsync(CancellationToken cancellationToken);
+    Task<DormSuiteSweepDto> SubmitAsync(string suiteNumber, SubmitDormSuiteSweepRequest request, CancellationToken cancellationToken);
 }
 
 public interface IDormRosterImportService

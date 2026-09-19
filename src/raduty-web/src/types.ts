@@ -66,6 +66,13 @@ export interface DormRoomCheck extends DormRoomCheckSummary {
 }
 export interface DormCheckPhoto { id: string; fileName: string; contentType: string; sizeBytes: number; uploadedAt: string }
 export interface DormCheckReset { deletedChecks: number; deletedPhotos: number }
+export interface DormSuiteSweepSummary { id: string; checkedByUserId: string; checkedByName: string; checkedAt: string; hasConcerns: boolean }
+export interface DormSweepSuite { suiteNumber: string; latestSweep?: DormSuiteSweepSummary | null }
+export interface DormSuiteSweep extends DormSuiteSweepSummary {
+  suiteNumber: string; hasTrashInCommonArea: boolean; hasTrashInBathroom: boolean
+  hasFurnitureMovedToCommonArea: boolean; hasBathroomIssue: boolean; hasCommonAreaDamage: boolean
+  needsFollowUp: boolean; notes?: string | null
+}
 export interface DormRosterImportIssue { rowNumber?: number | null; message: string }
 export interface DormRosterChange { type: 'Added' | 'Removed' | 'Moved' | 'Updated'; firstName: string; lastName: string; fromRoom?: string | null; toRoom?: string | null }
 export interface DormRosterImportPreview {

@@ -13,6 +13,7 @@ import { HomePage } from './pages/HomePage'
 const DirectoryPage = lazy(() => import('./pages/DirectoryPage').then((module) => ({ default: module.DirectoryPage })))
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((module) => ({ default: module.ProfilePage })))
 const DormCheckPage = lazy(() => import('./pages/DormCheckPage').then((module) => ({ default: module.DormCheckPage })))
+const DormSweepPage = lazy(() => import('./pages/DormSweepPage').then((module) => ({ default: module.DormSweepPage })))
 const AdminDashboardPage = lazy(() => import('./pages/AdminPages').then((module) => ({ default: module.AdminDashboardPage })))
 const AuditLogPage = lazy(() => import('./pages/AdminPages').then((module) => ({ default: module.AuditLogPage })))
 const UserManagementPage = lazy(() => import('./pages/AdminPages').then((module) => ({ default: module.UserManagementPage })))
@@ -35,6 +36,7 @@ export default function App() {
     <Route path="/" element={<HomePage user={me.data} />} />
     <Route path="/schedule" element={<SchedulePage user={me.data} />} />
     <Route path="/dorm-checks" element={<DormCheckPage />} />
+    <Route path="/dorm-sweeps" element={<DormSweepPage />} />
     <Route path="/residents" element={<ResidentManagementPage user={me.data} />} />
     <Route path="/directory" element={<DirectoryPage />} />
     <Route path="/profile" element={<ProfilePage user={me.data} />} />

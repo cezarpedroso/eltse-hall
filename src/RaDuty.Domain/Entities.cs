@@ -27,6 +27,7 @@ public sealed class ResidenceHall : Entity
     public ICollection<HallMembership> Memberships { get; set; } = [];
     public ICollection<SchedulePeriod> SchedulePeriods { get; set; } = [];
     public ICollection<DormRoom> DormRooms { get; set; } = [];
+    public ICollection<DormSuiteSweep> DormSuiteSweeps { get; set; } = [];
 }
 
 public sealed class HallMembership : Entity
@@ -146,6 +147,23 @@ public sealed class DormRoomCheck : Entity
     public string? Notes { get; set; }
     public DateTimeOffset CheckedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<DormCheckPhoto> Photos { get; set; } = [];
+}
+
+public sealed class DormSuiteSweep : Entity
+{
+    public Guid ResidenceHallId { get; set; }
+    public ResidenceHall ResidenceHall { get; set; } = null!;
+    public required string SuiteNumber { get; set; }
+    public Guid CheckedByUserId { get; set; }
+    public User CheckedByUser { get; set; } = null!;
+    public bool HasTrashInCommonArea { get; set; }
+    public bool HasTrashInBathroom { get; set; }
+    public bool HasFurnitureMovedToCommonArea { get; set; }
+    public bool HasBathroomIssue { get; set; }
+    public bool HasCommonAreaDamage { get; set; }
+    public bool NeedsFollowUp { get; set; }
+    public string? Notes { get; set; }
+    public DateTimeOffset CheckedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public sealed class DormCheckPhoto : Entity

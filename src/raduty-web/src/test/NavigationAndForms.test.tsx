@@ -39,6 +39,7 @@ describe('Role-based navigation and forms', () => {
     const desktopNav = screen.getByRole('navigation', { name: 'Primary navigation' })
     expect(within(desktopNav).getByRole('link', { name: 'Schedule' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Dorm check' })).toBeInTheDocument()
+    expect(within(desktopNav).getByRole('link', { name: 'Dorm sweeps' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Residents' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Manage' })).toBeInTheDocument()
     expect(within(desktopNav).queryByRole('link', { name: 'People' })).not.toBeInTheDocument()
