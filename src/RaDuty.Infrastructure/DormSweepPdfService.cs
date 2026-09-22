@@ -23,60 +23,39 @@ public sealed class DormSweepPdfService : IDormSweepPdfService
         {
             document.Page(page =>
             {
-                ConfigurePage(page, generatedAt);
-                page.Content().PaddingVertical(28).Column(column =>
+                ConfigurePage(page, generatedAt, report.ResidenceHallName, "Dorm sweep report");
+                page.Content().PaddingVertical(14).Column(column =>
                 {
-                    column.Spacing(18);
-                    column.Item().Text(report.ResidenceHallName.ToUpperInvariant()).SemiBold().FontSize(11).FontColor(Primary);
-                    column.Item().Text("Dorm sweep report").Bold().FontSize(28).FontColor(Ink);
-                    column.Item().Text("Latest suite common-area and bathroom sweep for every Eltse Hall suite.").FontSize(11).FontColor(Muted);
-                    column.Item().PaddingTop(8).Row(row =>
+                    column.Spacing(10);
+                    column.Item().Element(container => Summary(container,
+                        "Latest suite common-area and bathroom sweep for every Eltse Hall suite.",
+                        report.Suites.Count.ToString(), "Suites",
+                        completed.ToString(), "Completed",
+                        concerns.ToString(), "Need attention",
+                        "Each suite lists its current residents and the latest submitted sweep response."));
+                    foreach (var suite in report.Suites)
                     {
-                        Metric(row.RelativeItem(), report.Suites.Count.ToString(), "Suites");
-                        row.Spacing(10);
-                        Metric(row.RelativeItem(), completed.ToString(), "Completed");
-                        row.Spacing(10);
-                        Metric(row.RelativeItem(), concerns.ToString(), "Need attention");
-                    });
-                    column.Item().PaddingTop(12).BorderTop(1).BorderColor(Line).PaddingTop(14)
-                        .Text("Each suite lists its current residents and the latest submitted sweep response.")
-                        .FontSize(9).FontColor(Muted);
+                        column.Item().Element(container => SuiteSection(container, suite));
+                    }
                 });
             });
-
-            foreach (var suite in report.Suites)
-            {
-                document.Page(page =>
-                {
-                    ConfigurePage(page, generatedAt);
-                    page.Header().PaddingBottom(10).BorderBottom(1).BorderColor(Line).Row(row =>
-                    {
-                        row.RelativeItem().Column(left =>
-                        {
-                            left.Item().Text(report.ResidenceHallName.ToUpperInvariant()).SemiBold().FontSize(8).FontColor(Primary);
-                            left.Item().Text($"Suite {suite.SuiteNumber}").Bold().FontSize(20).FontColor(Ink);
-                        });
-                        row.ConstantItem(110).AlignRight().Text(suite.LatestSweep is null
-                                ? "NOT SWEPT"
-                                : suite.LatestSweep.HasConcerns ? "NEEDS ATTENTION" : "CLEAR")
-                            .SemiBold().FontSize(8).FontColor(suite.LatestSweep is null || suite.LatestSweep.HasConcerns ? Danger : Primary);
-                    });
-                    page.Content().PaddingVertical(12).Column(column =>
-                    {
-                        column.Spacing(12);
-                        column.Item().Element(container => Residents(container, suite));
-                        column.Item().Element(container => SweepCard(container, suite.LatestSweep));
-                    });
-                });
-            }
         }).GeneratePdf();
     }
 
-    private static void ConfigurePage(PageDescriptor page, DateTimeOffset generatedAt)
+    private static void ConfigurePage(PageDescriptor page, DateTimeOffset generatedAt, string residenceHallName, string title)
     {
         page.Size(PageSizes.Letter);
         page.Margin(32);
         page.DefaultTextStyle(x => x.FontFamily(Fonts.Arial).FontSize(8).FontColor(Ink));
+        page.Header().PaddingBottom(8).BorderBottom(1).BorderColor(Line).Row(row =>
+        {
+            row.RelativeItem().Column(column =>
+            {
+                column.Item().Text(residenceHallName.ToUpperInvariant()).SemiBold().FontSize(8).FontColor(Primary);
+                column.Item().Text(title).Bold().FontSize(14).FontColor(Ink);
+            });
+            row.ConstantItem(130).AlignRight().Text($"Generated {generatedAt:MMM d, yyyy}").FontSize(7).FontColor(Muted);
+        });
         page.Footer().BorderTop(1).BorderColor(Line).PaddingTop(7).Row(row =>
         {
             row.RelativeItem().Text($"Generated {generatedAt:MMM d, yyyy 'at' h:mm tt} UTC - Restricted residence-life information").FontSize(7).FontColor(Muted);
@@ -84,19 +63,52 @@ public sealed class DormSweepPdfService : IDormSweepPdfService
         });
     }
 
-    private static void Metric(IContainer container, string value, string label) => container
-        .Border(1).BorderColor(Line).Background("#F7F9F7").Padding(14).Column(column =>
+    private static void Summary(IContainer container, string description, string firstValue, string firstLabel,
+        string secondValue, string secondLabel, string thirdValue, string thirdLabel, string note) => container
+        .Border(1).BorderColor(Line).Background("#FBFCFB").Padding(10).Column(column =>
         {
-            column.Item().Text(value).Bold().FontSize(22).FontColor(Primary);
+            column.Spacing(8);
+            column.Item().Text(description).FontSize(9).FontColor(Muted);
+            column.Item().Row(row =>
+            {
+                Metric(row.RelativeItem(), firstValue, firstLabel);
+                row.Spacing(8);
+                Metric(row.RelativeItem(), secondValue, secondLabel);
+                row.Spacing(8);
+                Metric(row.RelativeItem(), thirdValue, thirdLabel);
+            });
+            column.Item().Text(note).FontSize(7).FontColor(Muted);
+        });
+
+    private static void Metric(IContainer container, string value, string label) => container
+        .Border(1).BorderColor(Line).Background("#F7F9F7").Padding(8).Column(column =>
+        {
+            column.Item().Text(value).Bold().FontSize(15).FontColor(Primary);
             column.Item().Text(label.ToUpperInvariant()).SemiBold().FontSize(7).FontColor(Muted);
         });
 
+    private static void SuiteSection(IContainer container, DormSweepSuiteReportDto suite)
+    {
+        container.Border(1).BorderColor(Line).Padding(8).Column(column =>
+        {
+            column.Spacing(7);
+            column.Item().Row(row =>
+            {
+                row.RelativeItem().Text($"Suite {suite.SuiteNumber}").Bold().FontSize(12).FontColor(Ink);
+                row.ConstantItem(110).AlignRight().Text(Status(suite.LatestSweep))
+                    .SemiBold().FontSize(8).FontColor(suite.LatestSweep is null || suite.LatestSweep.HasConcerns ? Danger : Primary);
+            });
+            column.Item().Element(container => Residents(container, suite));
+            column.Item().Element(container => SweepCard(container, suite.LatestSweep));
+        });
+    }
+
     private static void Residents(IContainer container, DormSweepSuiteReportDto suite)
     {
-        container.Border(1).BorderColor(Line).Padding(10).Column(column =>
+        container.Background("#F7F9F7").Padding(6).Column(column =>
         {
-            column.Spacing(6);
-            column.Item().Text("Residents").Bold().FontSize(11).FontColor(Ink);
+            column.Spacing(4);
+            column.Item().Text("Residents").SemiBold().FontSize(8).FontColor(Ink);
             if (suite.Residents.Count == 0)
             {
                 column.Item().Text("No residents listed for this suite.").Italic().FontColor(Muted);
@@ -121,13 +133,13 @@ public sealed class DormSweepPdfService : IDormSweepPdfService
 
     private static void SweepCard(IContainer container, DormSuiteSweepDto? sweep)
     {
-        container.Border(1).BorderColor(Line).Padding(10).Column(column =>
+        container.PaddingTop(2).Column(column =>
         {
-            column.Spacing(7);
-            column.Item().Text("Sweep response").Bold().FontSize(11).FontColor(Ink);
+            column.Spacing(5);
+            column.Item().Text("Sweep response").Bold().FontSize(9).FontColor(Ink);
             if (sweep is null)
             {
-                column.Item().PaddingTop(8).PaddingBottom(8).Text("No suite sweep has been submitted.").Italic().FontColor(Muted);
+                column.Item().Text("No suite sweep has been submitted.").Italic().FontColor(Muted);
                 return;
             }
 
@@ -157,6 +169,9 @@ public sealed class DormSweepPdfService : IDormSweepPdfService
         row.RelativeItem().Text(label).FontSize(7).FontColor(Muted);
         row.ConstantItem(27).AlignRight().Text(answer).Bold().FontSize(7).FontColor(concern ? Danger : Primary);
     });
+
+    private static string Status(DormSuiteSweepDto? sweep) =>
+        sweep is null ? "NOT SWEPT" : sweep.HasConcerns ? "NEEDS ATTENTION" : "CLEAR";
 
     private static string YesNo(bool value) => value ? "Yes" : "No";
 }

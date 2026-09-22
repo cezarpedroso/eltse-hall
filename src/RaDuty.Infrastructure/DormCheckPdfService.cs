@@ -22,57 +22,42 @@ public sealed class DormCheckPdfService : IDormCheckPdfService
         {
             document.Page(page =>
             {
-                ConfigurePage(page, generatedAt);
-                page.Content().PaddingVertical(28).Column(column =>
+                ConfigurePage(page, generatedAt, report.ResidenceHallName, "Room check report");
+                page.Content().PaddingVertical(14).Column(column =>
                 {
-                    column.Spacing(18);
-                    column.Item().Text(report.ResidenceHallName.ToUpperInvariant()).SemiBold().FontSize(11).FontColor(Primary);
-                    column.Item().Text("Room check report").Bold().FontSize(28).FontColor(Ink);
-                    column.Item().Text("Latest submitted checklist for every suite and room.").FontSize(11).FontColor(Muted);
-                    column.Item().PaddingTop(8).Row(row =>
+                    column.Spacing(10);
+                    column.Item().Element(container => Summary(container,
+                        "Latest submitted checklist for every suite and room.",
+                        report.Suites.Count.ToString(), "Suites",
+                        roomCount.ToString(), "Rooms",
+                        checkedCount.ToString(), "Completed",
+                        "Unchecked rooms are included. N/A is retained for common-area responses."));
+                    foreach (var suite in report.Suites)
                     {
-                        Metric(row.RelativeItem(), report.Suites.Count.ToString(), "Suites");
-                        row.Spacing(10);
-                        Metric(row.RelativeItem(), roomCount.ToString(), "Rooms");
-                        row.Spacing(10);
-                        Metric(row.RelativeItem(), checkedCount.ToString(), "Completed");
-                    });
-                    column.Item().PaddingTop(12).BorderTop(1).BorderColor(Line).PaddingTop(14)
-                        .Text("Unchecked rooms are included and clearly marked. N/A is retained for common-area responses.")
-                        .FontSize(9).FontColor(Muted);
-                });
-            });
-
-            foreach (var suite in report.Suites)
-            {
-                document.Page(page =>
-                {
-                    ConfigurePage(page, generatedAt);
-                    page.Header().PaddingBottom(10).BorderBottom(1).BorderColor(Line).Row(row =>
-                    {
-                        row.RelativeItem().Column(left =>
-                        {
-                            left.Item().Text(report.ResidenceHallName.ToUpperInvariant()).SemiBold().FontSize(8).FontColor(Primary);
-                            left.Item().Text($"Suite {suite.SuiteNumber}").Bold().FontSize(20).FontColor(Ink);
-                        });
-                        row.ConstantItem(90).AlignRight().Text($"{suite.Rooms.Count(x => x.LatestCheck is not null)}/4 checked").SemiBold().FontSize(9).FontColor(Muted);
-                    });
-                    page.Content().PaddingVertical(10).Column(column =>
-                    {
-                        column.Spacing(7);
+                        column.Item().Element(container => SuiteHeader(container, suite.SuiteNumber,
+                            $"{suite.Rooms.Count(x => x.LatestCheck is not null)}/4 checked"));
                         foreach (var room in suite.Rooms)
                             column.Item().Element(container => RoomCard(container, room));
-                    });
+                    }
                 });
-            }
+            });
         }).GeneratePdf();
     }
 
-    private static void ConfigurePage(PageDescriptor page, DateTimeOffset generatedAt)
+    private static void ConfigurePage(PageDescriptor page, DateTimeOffset generatedAt, string residenceHallName, string title)
     {
         page.Size(PageSizes.Letter);
         page.Margin(32);
         page.DefaultTextStyle(x => x.FontFamily(Fonts.Arial).FontSize(8).FontColor(Ink));
+        page.Header().PaddingBottom(8).BorderBottom(1).BorderColor(Line).Row(row =>
+        {
+            row.RelativeItem().Column(column =>
+            {
+                column.Item().Text(residenceHallName.ToUpperInvariant()).SemiBold().FontSize(8).FontColor(Primary);
+                column.Item().Text(title).Bold().FontSize(14).FontColor(Ink);
+            });
+            row.ConstantItem(130).AlignRight().Text($"Generated {generatedAt:MMM d, yyyy}").FontSize(7).FontColor(Muted);
+        });
         page.Footer().BorderTop(1).BorderColor(Line).PaddingTop(7).Row(row =>
         {
             row.RelativeItem().Text($"Generated {generatedAt:MMM d, yyyy 'at' h:mm tt} UTC - Restricted residence-life information").FontSize(7).FontColor(Muted);
@@ -80,21 +65,45 @@ public sealed class DormCheckPdfService : IDormCheckPdfService
         });
     }
 
-    private static void Metric(IContainer container, string value, string label) => container
-        .Border(1).BorderColor(Line).Background("#F7F9F7").Padding(14).Column(column =>
+    private static void Summary(IContainer container, string description, string firstValue, string firstLabel,
+        string secondValue, string secondLabel, string thirdValue, string thirdLabel, string note) => container
+        .Border(1).BorderColor(Line).Background("#FBFCFB").Padding(10).Column(column =>
         {
-            column.Item().Text(value).Bold().FontSize(22).FontColor(Primary);
+            column.Spacing(8);
+            column.Item().Text(description).FontSize(9).FontColor(Muted);
+            column.Item().Row(row =>
+            {
+                Metric(row.RelativeItem(), firstValue, firstLabel);
+                row.Spacing(8);
+                Metric(row.RelativeItem(), secondValue, secondLabel);
+                row.Spacing(8);
+                Metric(row.RelativeItem(), thirdValue, thirdLabel);
+            });
+            column.Item().Text(note).FontSize(7).FontColor(Muted);
+        });
+
+    private static void Metric(IContainer container, string value, string label) => container
+        .Border(1).BorderColor(Line).Background("#F7F9F7").Padding(8).Column(column =>
+        {
+            column.Item().Text(value).Bold().FontSize(15).FontColor(Primary);
             column.Item().Text(label.ToUpperInvariant()).SemiBold().FontSize(7).FontColor(Muted);
+        });
+
+    private static void SuiteHeader(IContainer container, string suiteNumber, string status) => container
+        .PaddingTop(3).BorderBottom(1).BorderColor(Line).PaddingBottom(5).Row(row =>
+        {
+            row.RelativeItem().Text($"Suite {suiteNumber}").Bold().FontSize(12).FontColor(Ink);
+            row.ConstantItem(90).AlignRight().Text(status).SemiBold().FontSize(8).FontColor(Muted);
         });
 
     private static void RoomCard(IContainer container, DormRoomReportDto room)
     {
-        container.Border(1).BorderColor(Line).Padding(9).Column(column =>
+        container.Border(1).BorderColor(Line).Padding(7).Column(column =>
         {
-            column.Spacing(5);
+            column.Spacing(4);
             column.Item().Row(row =>
             {
-                row.ConstantItem(68).Text($"Room {room.RoomLetter}").Bold().FontSize(12).FontColor(Ink);
+                row.ConstantItem(54).Text($"Room {room.RoomLetter}").Bold().FontSize(10).FontColor(Ink);
                 row.RelativeItem().Text(room.Residents.Count == 0 ? "Vacant" : string.Join("  |  ", room.Residents.Select(x => $"{x.FirstName} {x.LastName}"))).FontSize(8).FontColor(Muted);
                 row.ConstantItem(145).AlignRight().Text(room.LatestCheck is null ? "NOT CHECKED" : $"Checked by {room.LatestCheck.CheckedByName}")
                     .SemiBold().FontSize(7).FontColor(room.LatestCheck is null ? "#9A3F37" : Primary);
@@ -102,7 +111,7 @@ public sealed class DormCheckPdfService : IDormCheckPdfService
 
             if (room.LatestCheck is null)
             {
-                column.Item().PaddingTop(8).PaddingBottom(8).Text("No form response has been submitted for this room.").Italic().FontColor(Muted);
+                column.Item().PaddingVertical(3).Text("No form response has been submitted for this room.").Italic().FontColor(Muted);
                 return;
             }
 
