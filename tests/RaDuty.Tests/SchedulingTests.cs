@@ -170,6 +170,25 @@ public sealed class PersistenceAndPdfTests
         Assert.True(bytes.Length > 1000);
         Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
     }
+
+    [Fact]
+    public void Dorm_sweep_pdf_contains_suites_and_residents()
+    {
+        var sweep = new DormSuiteSweepDto(Guid.NewGuid(), "01", Guid.NewGuid(), "Jordan Lee",
+            DateTimeOffset.Parse("2026-08-05T05:00:00Z"), true, true, false, true, true, false, false,
+            "Mold near the bathroom sink.", true);
+        var residents = new[]
+        {
+            new DormSweepResidentDto(Guid.NewGuid(), "Alex", "Rivera", "ELTS-01A"),
+            new DormSweepResidentDto(Guid.NewGuid(), "Sam", "Lee", "ELTS-01B")
+        };
+        var suite = new DormSweepSuiteReportDto("01", residents, sweep);
+
+        var bytes = new DormSweepPdfService().Render(new DormSweepReportDto("Eltse Hall", [suite]), DateTimeOffset.UtcNow);
+
+        Assert.True(bytes.Length > 1000);
+        Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
+    }
 }
 
 public sealed class AuthorizationPolicyTests

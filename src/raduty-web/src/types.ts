@@ -69,9 +69,9 @@ export interface DormCheckReset { deletedChecks: number; deletedPhotos: number }
 export interface DormSuiteSweepSummary { id: string; checkedByUserId: string; checkedByName: string; checkedAt: string; hasConcerns: boolean }
 export interface DormSweepSuite { suiteNumber: string; latestSweep?: DormSuiteSweepSummary | null }
 export interface DormSuiteSweep extends DormSuiteSweepSummary {
-  suiteNumber: string; hasTrashInCommonArea: boolean; hasTrashInBathroom: boolean
-  hasFurnitureMovedToCommonArea: boolean; hasBathroomIssue: boolean; hasCommonAreaDamage: boolean
-  needsFollowUp: boolean; notes?: string | null
+  suiteNumber: string; isCommonAreaClean: boolean; hasMoldOrLeak: boolean
+  hasFurnitureMovedToCommonArea: boolean; isBathroomClean: boolean; areToiletsAndSinksWorking: boolean
+  areShowersWorking: boolean; smellsLikeMarijuanaOrAlcohol: boolean; notes?: string | null
 }
 export interface DormRosterImportIssue { rowNumber?: number | null; message: string }
 export interface DormRosterChange { type: 'Added' | 'Removed' | 'Moved' | 'Updated'; firstName: string; lastName: string; fromRoom?: string | null; toRoom?: string | null }

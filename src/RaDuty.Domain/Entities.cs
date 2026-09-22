@@ -156,12 +156,13 @@ public sealed class DormSuiteSweep : Entity
     public required string SuiteNumber { get; set; }
     public Guid CheckedByUserId { get; set; }
     public User CheckedByUser { get; set; } = null!;
-    public bool HasTrashInCommonArea { get; set; }
-    public bool HasTrashInBathroom { get; set; }
+    public bool IsCommonAreaClean { get; set; }
+    public bool HasMoldOrLeak { get; set; }
     public bool HasFurnitureMovedToCommonArea { get; set; }
-    public bool HasBathroomIssue { get; set; }
-    public bool HasCommonAreaDamage { get; set; }
-    public bool NeedsFollowUp { get; set; }
+    public bool IsBathroomClean { get; set; }
+    public bool AreToiletsAndSinksWorking { get; set; }
+    public bool AreShowersWorking { get; set; }
+    public bool SmellsLikeMarijuanaOrAlcohol { get; set; }
     public string? Notes { get; set; }
     public DateTimeOffset CheckedAt { get; set; } = DateTimeOffset.UtcNow;
 }

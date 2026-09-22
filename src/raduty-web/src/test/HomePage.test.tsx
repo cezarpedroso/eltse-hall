@@ -8,7 +8,7 @@ describe('Home page', () => {
   it('presents schedule, room checks, dorm sweeps, and resident management', () => {
     render(<MemoryRouter><HomePage user={raUser} /></MemoryRouter>)
     expect(screen.getByRole('link', { name: /Schedule/ })).toHaveAttribute('href', '/schedule')
-    expect(screen.getByRole('link', { name: /Dorm check/ })).toHaveAttribute('href', '/dorm-checks')
+    expect(screen.getByRole('link', { name: /Room Check/ })).toHaveAttribute('href', '/dorm-checks')
     expect(screen.getByRole('link', { name: /Dorm sweeps/ })).toHaveAttribute('href', '/dorm-sweeps')
     expect(screen.getByRole('link', { name: /Residents/ })).toHaveAttribute('href', '/residents')
     expect(screen.getByRole('navigation', { name: 'Dorm tools' }).children).toHaveLength(4)

@@ -40,6 +40,7 @@ public static class ServiceRegistration
         services.AddScoped<IDormResidentManagementService, DormResidentManagementService>();
         services.AddSingleton<ISchedulePdfService, SchedulePdfService>();
         services.AddSingleton<IDormCheckPdfService, DormCheckPdfService>();
+        services.AddSingleton<IDormSweepPdfService, DormSweepPdfService>();
         return services;
     }
 }

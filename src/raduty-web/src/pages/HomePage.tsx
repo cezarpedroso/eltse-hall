@@ -19,7 +19,7 @@ export function HomePage({ user }: { user: CurrentUser }) {
 
       <Link className="home-action" to="/dorm-checks">
         <span className="home-action__icon"><ClipboardCheck /></span>
-        <span className="home-action__copy"><strong>Dorm check</strong><small>Check suites and rooms</small></span>
+        <span className="home-action__copy"><strong>Room Check</strong><small>Check individual rooms</small></span>
         <ArrowRight className="home-action__arrow" />
       </Link>
 

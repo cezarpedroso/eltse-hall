@@ -27,7 +27,7 @@ public sealed class DormCheckPdfService : IDormCheckPdfService
                 {
                     column.Spacing(18);
                     column.Item().Text(report.ResidenceHallName.ToUpperInvariant()).SemiBold().FontSize(11).FontColor(Primary);
-                    column.Item().Text("Dorm check report").Bold().FontSize(28).FontColor(Ink);
+                    column.Item().Text("Room check report").Bold().FontSize(28).FontColor(Ink);
                     column.Item().Text("Latest submitted checklist for every suite and room.").FontSize(11).FontColor(Muted);
                     column.Item().PaddingTop(8).Row(row =>
                     {
