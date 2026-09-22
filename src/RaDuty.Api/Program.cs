@@ -107,6 +107,21 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<RaDutyDbContext>();
+    await db.Database.MigrateAsync();
+
+    if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("SeedData:Enabled"))
+    {
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<ApplicationAccount>>();
+        var initialPassword = builder.Configuration["DevelopmentAccounts:InitialPassword"]
+            ?? throw new InvalidOperationException("DevelopmentAccounts:InitialPassword is required when seed data is enabled.");
+        await DevelopmentSeed.InitializeAsync(db, passwordHasher, initialPassword);
+    }
+}
+
 app.UseMiddleware<ApiExceptionMiddleware>();
 app.Use(async (context, next) =>
 {
@@ -132,17 +147,6 @@ app.MapHealthChecks("/health").AllowAnonymous();
 app.MapOpenApi("/openapi/{documentName}.json").RequireAuthorization("HallDirectorOnly");
 app.MapControllers();
 app.MapFallbackToFile("index.html").AllowAnonymous();
-
-if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("SeedData:Enabled"))
-{
-    await using var scope = app.Services.CreateAsyncScope();
-    var db = scope.ServiceProvider.GetRequiredService<RaDutyDbContext>();
-    await db.Database.MigrateAsync();
-    var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<ApplicationAccount>>();
-    var initialPassword = builder.Configuration["DevelopmentAccounts:InitialPassword"]
-        ?? throw new InvalidOperationException("DevelopmentAccounts:InitialPassword is required when seed data is enabled.");
-    await DevelopmentSeed.InitializeAsync(db, passwordHasher, initialPassword);
-}
 
 app.Run();
 
