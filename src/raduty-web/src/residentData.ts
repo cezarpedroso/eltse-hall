@@ -4,6 +4,7 @@ export const residentQueryKeys = {
   residents: ['residents'] as const,
   rooms: ['resident-rooms'] as const,
   dormCheckSuites: ['dorm-check-suites'] as const,
+  dormSweepSuites: ['dorm-sweep-suites'] as const,
 }
 
 export const sharedResidentQueryOptions = {
@@ -18,5 +19,6 @@ export async function refreshResidentData(queryClient: QueryClient) {
     queryClient.invalidateQueries({ queryKey: residentQueryKeys.residents }),
     queryClient.invalidateQueries({ queryKey: residentQueryKeys.rooms }),
     queryClient.invalidateQueries({ queryKey: residentQueryKeys.dormCheckSuites }),
+    queryClient.invalidateQueries({ queryKey: residentQueryKeys.dormSweepSuites }),
   ])
 }

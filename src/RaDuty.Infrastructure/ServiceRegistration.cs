@@ -35,10 +35,12 @@ public static class ServiceRegistration
         services.AddScoped<IScheduleService, ScheduleService>();
         services.AddScoped<IDormCheckService, DormCheckService>();
         services.AddScoped<IDormCheckPhotoService, DormCheckPhotoService>();
+        services.AddScoped<IDormSweepService, DormSweepService>();
         services.AddScoped<IDormRosterImportService, DormRosterImportService>();
         services.AddScoped<IDormResidentManagementService, DormResidentManagementService>();
         services.AddSingleton<ISchedulePdfService, SchedulePdfService>();
         services.AddSingleton<IDormCheckPdfService, DormCheckPdfService>();
+        services.AddSingleton<IDormSweepPdfService, DormSweepPdfService>();
         return services;
     }
 }

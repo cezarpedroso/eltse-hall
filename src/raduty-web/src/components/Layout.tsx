@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardCheck, Home, LogOut, Menu, ShieldCheck, UsersRound, X } from 'lucide-react'
+import { CalendarDays, ClipboardCheck, ClipboardList, Home, LogOut, Menu, ShieldCheck, UsersRound, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { signOut as endSession } from '../api'
@@ -12,7 +12,8 @@ export function AppLayout({ user, children }: { user: CurrentUser; children: Rea
   const links = [
     { to: '/', label: 'Home', icon: Home, end: true },
     { to: '/schedule', label: 'Schedule', icon: CalendarDays },
-    { to: '/dorm-checks', label: 'Dorm check', icon: ClipboardCheck },
+    { to: '/dorm-checks', label: 'Room check', icon: ClipboardCheck },
+    { to: '/dorm-sweeps', label: 'Dorm sweeps', icon: ClipboardList },
     { to: '/residents', label: 'Residents', icon: UsersRound },
     ...(isDirector ? [
       { to: '/admin', label: 'Manage', icon: ShieldCheck },

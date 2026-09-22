@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RaDuty.Infrastructure;
 
@@ -11,9 +12,11 @@ using RaDuty.Infrastructure;
 namespace RaDuty.Infrastructure.Migrations
 {
     [DbContext(typeof(RaDutyDbContext))]
-    partial class RaDutyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260919015431_AddDormSuiteSweeps")]
+    partial class AddDormSuiteSweeps
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -292,28 +295,28 @@ namespace RaDuty.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool>("AreShowersWorking")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("AreToiletsAndSinksWorking")
-                        .HasColumnType("bit");
-
                     b.Property<DateTimeOffset>("CheckedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<Guid>("CheckedByUserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("HasBathroomIssue")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasCommonAreaDamage")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("HasFurnitureMovedToCommonArea")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("HasMoldOrLeak")
+                    b.Property<bool>("HasTrashInBathroom")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsBathroomClean")
+                    b.Property<bool>("HasTrashInCommonArea")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsCommonAreaClean")
+                    b.Property<bool>("NeedsFollowUp")
                         .HasColumnType("bit");
 
                     b.Property<string>("Notes")
@@ -322,9 +325,6 @@ namespace RaDuty.Infrastructure.Migrations
 
                     b.Property<Guid>("ResidenceHallId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("SmellsLikeMarijuanaOrAlcohol")
-                        .HasColumnType("bit");
 
                     b.Property<string>("SuiteNumber")
                         .IsRequired()

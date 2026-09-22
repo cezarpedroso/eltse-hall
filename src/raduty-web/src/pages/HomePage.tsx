@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, ClipboardCheck, UsersRound } from 'lucide-react'
+import { ArrowRight, CalendarDays, ClipboardCheck, ClipboardList, UsersRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { CurrentUser } from '../types'
 
@@ -19,7 +19,13 @@ export function HomePage({ user }: { user: CurrentUser }) {
 
       <Link className="home-action" to="/dorm-checks">
         <span className="home-action__icon"><ClipboardCheck /></span>
-        <span className="home-action__copy"><strong>Dorm check</strong><small>Check suites and rooms</small></span>
+        <span className="home-action__copy"><strong>Room Check</strong><small>Check individual rooms</small></span>
+        <ArrowRight className="home-action__arrow" />
+      </Link>
+
+      <Link className="home-action" to="/dorm-sweeps">
+        <span className="home-action__icon"><ClipboardList /></span>
+        <span className="home-action__copy"><strong>Dorm sweeps</strong><small>Check bathrooms and common areas</small></span>
         <ArrowRight className="home-action__arrow" />
       </Link>
 

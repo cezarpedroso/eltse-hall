@@ -90,6 +90,43 @@ public sealed class DormCheckTests
         }
     }
 
+    [Fact]
+    public async Task Suite_sweep_is_saved_with_latest_status()
+    {
+        await using var db = new RaDutyDbContext(new DbContextOptionsBuilder<RaDutyDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var hall = new ResidenceHall { Name = "Eltse Hall" };
+        var ra = new User
+        {
+            SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
+            Role = HallRole.ResidentAssistant
+        };
+        var room = new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "A" };
+        room.Residents.Add(new DormResident { FirstName = "Alex", LastName = "Rivera" });
+        db.AddRange(hall, ra, room);
+        await db.SaveChangesAsync();
+        var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
+            null, null, ra.Role, true, hall.Id, hall.Name);
+        var service = new DormSweepService(db, new StubCurrentUserService(current));
+
+        var saved = await service.SubmitAsync("1", new SubmitDormSuiteSweepRequest(
+            true, true, true, true, true, false, false, "Mold by the sink."), CancellationToken.None);
+        var suites = await service.GetSuitesAsync(CancellationToken.None);
+        var report = await service.GetReportAsync(CancellationToken.None);
+
+        Assert.Equal("01", saved.SuiteNumber);
+        Assert.Equal("Jordan Lee", saved.CheckedByName);
+        Assert.True(saved.HasConcerns);
+        Assert.True(saved.HasMoldOrLeak);
+        Assert.False(saved.AreShowersWorking);
+        Assert.Equal("Mold by the sink.", saved.Notes);
+        Assert.Equal(25, suites.Count);
+        Assert.Equal(saved.Id, suites.Single(x => x.SuiteNumber == "01").LatestSweep?.Id);
+        Assert.Equal("ELTS-01A", report.Suites.Single(x => x.SuiteNumber == "01").Residents.Single().RoomCode);
+        Assert.Equal(saved.Id, report.Suites.Single(x => x.SuiteNumber == "01").LatestSweep?.Id);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), audit => audit.Action == "DORM_SUITE_SWEEP_COMPLETED");
+    }
+
     private sealed class StubCurrentUserService(CurrentUserDto current) : ICurrentUserService
     {
         public Task<CurrentUserDto> GetAsync(CancellationToken cancellationToken) => Task.FromResult(current);

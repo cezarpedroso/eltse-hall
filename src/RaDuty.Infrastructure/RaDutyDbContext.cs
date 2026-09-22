@@ -18,6 +18,7 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
     public DbSet<DormRoom> DormRooms => Set<DormRoom>();
     public DbSet<DormResident> DormResidents => Set<DormResident>();
     public DbSet<DormRoomCheck> DormRoomChecks => Set<DormRoomCheck>();
+    public DbSet<DormSuiteSweep> DormSuiteSweeps => Set<DormSuiteSweep>();
     public DbSet<DormCheckPhoto> DormCheckPhotos => Set<DormCheckPhoto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -113,6 +114,15 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
             entity.Property(x => x.Notes).HasMaxLength(2000);
             entity.HasIndex(x => new { x.DormRoomId, x.CheckedAt });
             entity.HasOne(x => x.DormRoom).WithMany(x => x.Checks).HasForeignKey(x => x.DormRoomId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.CheckedByUser).WithMany().HasForeignKey(x => x.CheckedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DormSuiteSweep>(entity =>
+        {
+            entity.Property(x => x.SuiteNumber).HasMaxLength(2);
+            entity.Property(x => x.Notes).HasMaxLength(2000);
+            entity.HasIndex(x => new { x.ResidenceHallId, x.SuiteNumber, x.CheckedAt });
+            entity.HasOne(x => x.ResidenceHall).WithMany(x => x.DormSuiteSweeps).HasForeignKey(x => x.ResidenceHallId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CheckedByUser).WithMany().HasForeignKey(x => x.CheckedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
