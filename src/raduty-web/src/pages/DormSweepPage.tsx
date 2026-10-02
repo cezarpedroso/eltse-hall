@@ -59,7 +59,7 @@ export function DormSweepPage() {
     <header className="dorm-check-heading">
       <div><span className="eyebrow">Eltse Hall</span><h1>Dorm sweeps</h1><p>Check suite common areas and bathrooms without changing the room-check records.</p></div>
       <div className="dorm-check-heading__actions">
-        <div className="dorm-check-heading__buttons"><button type="button" className="button button--danger-quiet dorm-reset" onClick={() => setConfirmReset(true)} disabled={!completed || reset.isPending}><RotateCcw size={17} />Reset sweeps</button><button type="button" className="button button--quiet dorm-export" onClick={exportPdf} disabled={exporting}><Download size={17} />{exporting ? 'Preparing...' : 'Export PDF'}</button></div>
+        <div className="dorm-check-heading__buttons"><button type="button" className="button button--danger-quiet dorm-reset" onClick={() => setConfirmReset(true)} disabled={reset.isPending}><RotateCcw size={17} />Reset sweeps</button><button type="button" className="button button--quiet dorm-export" onClick={exportPdf} disabled={exporting}><Download size={17} />{exporting ? 'Preparing...' : 'Export PDF'}</button></div>
         <div className="sweep-summary" aria-label={`${completed} suites swept, ${concerns} need attention`}>
           <span><strong>{completed}</strong><small>swept</small></span>
           <span className={concerns ? 'has-concerns' : ''}><strong>{concerns}</strong><small>attention</small></span>

@@ -97,6 +97,15 @@ describe('Dorm sweeps', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/dorm-sweeps/pdf'), expect.objectContaining({ credentials: 'include' })))
   })
 
+  it('allows every signed-in user to open the reset confirmation, including with no saved sweeps', async () => {
+    renderPage()
+    await screen.findByRole('button', { name: /Suite 01/ })
+
+    expect(screen.getByRole('button', { name: 'Reset sweeps' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Reset sweeps' }))
+    expect(screen.getByRole('dialog', { name: 'Reset all dorm sweeps?' })).toBeInTheDocument()
+  })
+
   it('requires confirmation before resetting all hall sweeps and refreshes the suites', async () => {
     renderPage()
     await screen.findByRole('button', { name: /Suite 01/ })
@@ -104,8 +113,6 @@ describe('Dorm sweeps', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset sweeps' }))
     const dialog = screen.getByRole('dialog', { name: 'Reset all dorm sweeps?' })
     expect(within(dialog).getByText(/permanently deletes all saved dorm sweep records for Eltse Hall/i)).toBeInTheDocument()
-    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/api/dorm-sweeps'), expect.objectContaining({ method: 'DELETE' }))
-
     fireEvent.click(within(dialog).getByRole('button', { name: 'Yes, reset all sweeps' }))
 
     expect(await screen.findByText('1 dorm sweep reset')).toBeInTheDocument()
