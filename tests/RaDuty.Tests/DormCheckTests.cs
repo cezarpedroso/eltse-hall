@@ -127,6 +127,48 @@ public sealed class DormCheckTests
         Assert.Contains(await db.AuditLogs.ToListAsync(), audit => audit.Action == "DORM_SUITE_SWEEP_COMPLETED");
     }
 
+    [Fact]
+    public async Task Sweep_reset_deletes_only_current_hall_sweeps_and_audits_count()
+    {
+        await using var db = new RaDutyDbContext(new DbContextOptionsBuilder<RaDutyDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var hall = new ResidenceHall { Name = "Eltse Hall" };
+        var otherHall = new ResidenceHall { Name = "Other Hall" };
+        var ra = new User
+        {
+            SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
+            Role = HallRole.ResidentAssistant
+        };
+        var otherRa = new User
+        {
+            SchoolEmail = "other-ra@example.edu", FirstName = "Taylor", LastName = "Kim",
+            Role = HallRole.ResidentAssistant
+        };
+        var room = new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "A" };
+        var roomCheck = new DormRoomCheck { DormRoom = room, CheckedByUser = ra };
+        db.AddRange(hall, otherHall, ra, otherRa, room, roomCheck,
+            new DormSuiteSweep { ResidenceHall = hall, SuiteNumber = "01", CheckedByUser = ra },
+            new DormSuiteSweep { ResidenceHall = hall, SuiteNumber = "02", CheckedByUser = ra },
+            new DormSuiteSweep { ResidenceHall = otherHall, SuiteNumber = "01", CheckedByUser = otherRa });
+        await db.SaveChangesAsync();
+        var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
+            null, null, ra.Role, true, hall.Id, hall.Name);
+        var service = new DormSweepService(db, new StubCurrentUserService(current));
+
+        var reset = await service.ResetAsync(CancellationToken.None);
+        var emptyReset = await service.ResetAsync(CancellationToken.None);
+
+        Assert.Equal(2, reset.DeletedSweeps);
+        Assert.Equal(0, emptyReset.DeletedSweeps);
+        Assert.Collection(await db.DormSuiteSweeps.ToListAsync(), sweep => Assert.Equal(otherHall.Id, sweep.ResidenceHallId));
+        Assert.Single(await db.DormRoomChecks.ToListAsync());
+        var audit = Assert.Single(await db.AuditLogs.ToListAsync());
+        Assert.Equal(ra.Id, audit.ActorUserId);
+        Assert.Equal("DORM_SWEEPS_RESET", audit.Action);
+        Assert.Equal(hall.Id.ToString(), audit.EntityId);
+        Assert.Contains("\"SweepCount\":2", audit.OldValuesJson);
+    }
+
     private sealed class StubCurrentUserService(CurrentUserDto current) : ICurrentUserService
     {
         public Task<CurrentUserDto> GetAsync(CancellationToken cancellationToken) => Task.FromResult(current);

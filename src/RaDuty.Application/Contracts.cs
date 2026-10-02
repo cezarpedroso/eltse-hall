@@ -92,6 +92,7 @@ public sealed record DormSuiteSweepDto(Guid Id, string SuiteNumber, Guid Checked
     DateTimeOffset CheckedAt, bool IsCommonAreaClean, bool HasMoldOrLeak,
     bool HasFurnitureMovedToCommonArea, bool IsBathroomClean, bool AreToiletsAndSinksWorking,
     bool AreShowersWorking, bool SmellsLikeMarijuanaOrAlcohol, string? Notes, bool HasConcerns);
+public sealed record DormSweepResetDto(int DeletedSweeps);
 public sealed record SubmitDormSuiteSweepRequest(bool IsCommonAreaClean, bool HasMoldOrLeak,
     bool HasFurnitureMovedToCommonArea, bool IsBathroomClean, bool AreToiletsAndSinksWorking,
     bool AreShowersWorking, bool SmellsLikeMarijuanaOrAlcohol, string? Notes);
@@ -184,6 +185,7 @@ public interface IDormSweepService
     Task<IReadOnlyList<DormSweepSuiteDto>> GetSuitesAsync(CancellationToken cancellationToken);
     Task<DormSweepReportDto> GetReportAsync(CancellationToken cancellationToken);
     Task<DormSuiteSweepDto> SubmitAsync(string suiteNumber, SubmitDormSuiteSweepRequest request, CancellationToken cancellationToken);
+    Task<DormSweepResetDto> ResetAsync(CancellationToken cancellationToken);
 }
 
 public interface IDormSweepPdfService

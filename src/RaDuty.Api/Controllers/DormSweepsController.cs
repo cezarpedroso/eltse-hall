@@ -27,5 +27,9 @@ public sealed class DormSweepsController(IDormSweepService dormSweeps, IDormSwee
         return Created($"/api/dorm-sweeps/suites/{sweep.SuiteNumber}/sweeps/{sweep.Id}", sweep);
     }
 
+    [HttpDelete]
+    public Task<DormSweepResetDto> Reset(CancellationToken cancellationToken) =>
+        dormSweeps.ResetAsync(cancellationToken);
+
     private static string Slug(string value) => string.Concat(value.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-')).Trim('-');
 }

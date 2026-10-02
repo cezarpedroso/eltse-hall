@@ -85,6 +85,28 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
             sweep.SmellsLikeMarijuanaOrAlcohol, sweep.Notes, HasConcerns(sweep));
     }
 
+    public async Task<DormSweepResetDto> ResetAsync(CancellationToken cancellationToken)
+    {
+        var current = await currentUserService.GetAsync(cancellationToken);
+        var sweeps = await db.DormSuiteSweeps
+            .Where(sweep => sweep.ResidenceHallId == current.ResidenceHallId)
+            .ToListAsync(cancellationToken);
+        if (sweeps.Count == 0) return new DormSweepResetDto(0);
+
+        db.DormSuiteSweeps.RemoveRange(sweeps);
+        db.AuditLogs.Add(new AuditLog
+        {
+            ActorUserId = current.Id,
+            Action = "DORM_SWEEPS_RESET",
+            EntityType = "ResidenceHall",
+            EntityId = current.ResidenceHallId.ToString(),
+            OldValuesJson = JsonSerializer.Serialize(new { SweepCount = sweeps.Count })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new DormSweepResetDto(sweeps.Count);
+    }
+
     private static string NormalizeSuiteNumber(string suiteNumber)
     {
         var cleaned = suiteNumber.Trim().ToUpperInvariant()

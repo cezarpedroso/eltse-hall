@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, CheckCircle2, ChevronRight, ClipboardList, Download, Sparkles } from 'lucide-react'
+import { AlertCircle, AlertTriangle, CheckCircle2, ChevronRight, ClipboardList, Download, RotateCcw, Sparkles } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { api, ApiError, downloadPdf } from '../api'
 import { Dialog, ErrorState } from '../components/ui'
 import { useToast } from '../components/toast'
 import { residentQueryKeys, sharedResidentQueryOptions } from '../residentData'
-import type { DormSuiteSweep, DormSweepSuite } from '../types'
+import type { DormSuiteSweep, DormSweepReset, DormSweepSuite } from '../types'
 
 const sweepQuestions = [
   ['isCommonAreaClean', 'Is the common area clean?'],
@@ -33,10 +33,21 @@ const initialForm: SweepForm = {
 export function DormSweepPage() {
   const suites = useQuery({ queryKey: residentQueryKeys.dormSweepSuites, queryFn: ({ signal }) => api<DormSweepSuite[]>('/api/dorm-sweeps/suites', {}, signal), ...sharedResidentQueryOptions })
   const [selectedSuite, setSelectedSuite] = useState<DormSweepSuite | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const queryClient = useQueryClient()
   const toast = useToast()
   const completed = suites.data?.filter((suite) => suite.latestSweep).length ?? 0
   const concerns = suites.data?.filter((suite) => suite.latestSweep?.hasConcerns).length ?? 0
+  const reset = useMutation({
+    mutationFn: () => api<DormSweepReset>('/api/dorm-sweeps', { method: 'DELETE' }),
+    onSuccess: async ({ deletedSweeps }) => {
+      setConfirmReset(false)
+      setSelectedSuite(null)
+      await queryClient.invalidateQueries({ queryKey: residentQueryKeys.dormSweepSuites })
+      toast(`${deletedSweeps} dorm sweep${deletedSweeps === 1 ? '' : 's'} reset`, 'success')
+    },
+  })
   async function exportPdf() {
     setExporting(true)
     try { await downloadPdf('/api/dorm-sweeps/pdf', 'eltse-hall-dorm-sweeps.pdf') }
@@ -48,7 +59,7 @@ export function DormSweepPage() {
     <header className="dorm-check-heading">
       <div><span className="eyebrow">Eltse Hall</span><h1>Dorm sweeps</h1><p>Check suite common areas and bathrooms without changing the room-check records.</p></div>
       <div className="dorm-check-heading__actions">
-        <button type="button" className="button button--quiet dorm-export" onClick={exportPdf} disabled={exporting}><Download size={17} />{exporting ? 'Preparing...' : 'Export PDF'}</button>
+        <div className="dorm-check-heading__buttons"><button type="button" className="button button--danger-quiet dorm-reset" onClick={() => setConfirmReset(true)} disabled={!completed || reset.isPending}><RotateCcw size={17} />Reset sweeps</button><button type="button" className="button button--quiet dorm-export" onClick={exportPdf} disabled={exporting}><Download size={17} />{exporting ? 'Preparing...' : 'Export PDF'}</button></div>
         <div className="sweep-summary" aria-label={`${completed} suites swept, ${concerns} need attention`}>
           <span><strong>{completed}</strong><small>swept</small></span>
           <span className={concerns ? 'has-concerns' : ''}><strong>{concerns}</strong><small>attention</small></span>
@@ -59,6 +70,7 @@ export function DormSweepPage() {
     {suites.isError && <ErrorState title="Dorm sweeps unavailable" message={suites.error instanceof ApiError ? suites.error.problem.title : 'The suite list could not be loaded.'} onRetry={() => suites.refetch()} />}
     {suites.data && <div className="sweep-grid">{suites.data.map((suite) => <SweepSuiteCard suite={suite} onSelect={setSelectedSuite} key={suite.suiteNumber} />)}</div>}
     {selectedSuite && <SweepDialog suite={selectedSuite} onClose={() => setSelectedSuite(null)} />}
+    <Dialog open={confirmReset} onClose={() => !reset.isPending && setConfirmReset(false)} title="Reset all dorm sweeps?" className="reset-checks-dialog"><div className="reset-checks-warning"><AlertTriangle /><div><strong>Are you sure?</strong><p>This permanently deletes all saved dorm sweep records for Eltse Hall. The suite and resident lists will stay in place.</p></div></div><p className="reset-checks-final">This action cannot be undone.</p>{reset.isError && <p className="inline-error" role="alert">{reset.error instanceof ApiError ? reset.error.problem.title : 'The dorm sweeps could not be reset.'}</p>}<div className="dialog-actions"><button type="button" className="button button--danger" onClick={() => reset.mutate()} disabled={reset.isPending}>{reset.isPending ? 'Resetting...' : 'Yes, reset all sweeps'}</button><button type="button" className="button button--quiet" onClick={() => setConfirmReset(false)} disabled={reset.isPending}>Cancel</button></div></Dialog>
   </div>
 }
 

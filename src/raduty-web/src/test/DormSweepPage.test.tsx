@@ -18,6 +18,7 @@ const suites: DormSweepSuite[] = [
     },
   },
 ]
+let resetFailure = false
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -26,6 +27,7 @@ function renderPage() {
 
 describe('Dorm sweeps', () => {
   beforeEach(() => {
+    resetFailure = false
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:sweep-report') })
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
     vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
@@ -46,6 +48,11 @@ describe('Dorm sweeps', () => {
           notes: 'Trash needs pickup.',
           hasConcerns: true,
         }), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (init?.method === 'DELETE') {
+        return Promise.resolve(resetFailure
+          ? new Response(JSON.stringify({ status: 500, title: 'Reset failed.', code: 'RESET_FAILED' }), { status: 500, headers: { 'Content-Type': 'application/problem+json' } })
+          : new Response(JSON.stringify({ deletedSweeps: 1 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
       }
       if (String(_url).includes('/api/dorm-sweeps/pdf')) {
         return Promise.resolve(new Response(new Blob(['%PDF-1.7']), { status: 200, headers: { 'Content-Type': 'application/pdf' } }))
@@ -88,5 +95,33 @@ describe('Dorm sweeps', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export PDF' }))
 
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/dorm-sweeps/pdf'), expect.objectContaining({ credentials: 'include' })))
+  })
+
+  it('requires confirmation before resetting all hall sweeps and refreshes the suites', async () => {
+    renderPage()
+    await screen.findByRole('button', { name: /Suite 01/ })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset sweeps' }))
+    const dialog = screen.getByRole('dialog', { name: 'Reset all dorm sweeps?' })
+    expect(within(dialog).getByText(/permanently deletes all saved dorm sweep records for Eltse Hall/i)).toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/api/dorm-sweeps'), expect.objectContaining({ method: 'DELETE' }))
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Yes, reset all sweeps' }))
+
+    expect(await screen.findByText('1 dorm sweep reset')).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/dorm-sweeps'), expect.objectContaining({ method: 'DELETE' }))
+    await waitFor(() => expect(vi.mocked(fetch).mock.calls.filter(([url, init]) => String(url).includes('/api/dorm-sweeps/suites') && init?.method !== 'DELETE')).toHaveLength(2))
+  })
+
+  it('shows reset failures and keeps the confirmation dialog open', async () => {
+    resetFailure = true
+    renderPage()
+    await screen.findByRole('button', { name: /Suite 01/ })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset sweeps' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, reset all sweeps' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Reset failed.')
+    expect(screen.getByRole('dialog', { name: 'Reset all dorm sweeps?' })).toBeInTheDocument()
   })
 })

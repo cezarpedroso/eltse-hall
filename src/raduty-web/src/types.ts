@@ -66,6 +66,7 @@ export interface DormRoomCheck extends DormRoomCheckSummary {
 }
 export interface DormCheckPhoto { id: string; fileName: string; contentType: string; sizeBytes: number; uploadedAt: string }
 export interface DormCheckReset { deletedChecks: number; deletedPhotos: number }
+export interface DormSweepReset { deletedSweeps: number }
 export interface DormSuiteSweepSummary { id: string; checkedByUserId: string; checkedByName: string; checkedAt: string; hasConcerns: boolean }
 export interface DormSweepSuite { suiteNumber: string; latestSweep?: DormSuiteSweepSummary | null }
 export interface DormSuiteSweep extends DormSuiteSweepSummary {
