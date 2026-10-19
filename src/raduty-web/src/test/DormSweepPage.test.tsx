@@ -21,6 +21,7 @@ const suites: DormSweepSuite[] = [
       checkedAt: '2026-08-05T00:00:00Z', isCommonAreaClean: false, hasMoldOrLeak: true,
       hasFurnitureMovedToCommonArea: false, isBathroomClean: true, areToiletsAndSinksWorking: true,
       areShowersWorking: false, smellsLikeMarijuanaOrAlcohol: false, notes: 'Saved suite note.', hasConcerns: true,
+      photos: [{ id: 'photo-2', fileName: 'saved-suite.jpg', contentType: 'image/jpeg', sizeBytes: 123, uploadedAt: '2026-08-05T00:00:00Z' }],
     },
   },
 ]
@@ -104,7 +105,23 @@ describe('Dorm sweeps', () => {
     expect(within(dialog).getByLabelText('Yes', { selector: 'input[name="hasMoldOrLeak"]' })).toBeChecked()
     expect(within(dialog).getByLabelText('No', { selector: 'input[name="areShowersWorking"]' })).toBeChecked()
     expect(within(dialog).getByLabelText('Notes')).toHaveValue('Saved suite note.')
+    expect(within(dialog).getByAltText('saved-suite.jpg')).toHaveAttribute('src', '/api/dorm-sweeps/photos/photo-2')
     expect(within(dialog).getByRole('button', { name: 'Update sweep' })).toBeInTheDocument()
+  })
+
+  it('uploads selected suite pictures separately after saving the sweep', async () => {
+    renderPage()
+    await screen.findByRole('button', { name: /Suite 01/ })
+    fireEvent.click(screen.getByRole('button', { name: /Suite 01/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Suite 01 sweep' })
+    const upload = within(dialog).getByLabelText('Upload pictures')
+    const photo = new File(['suite-picture'], 'suite.png', { type: 'image/png' })
+    fireEvent.change(upload, { target: { files: [photo] } })
+    expect(await within(dialog).findByText('suite.png')).toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save sweep' }))
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/dorm-sweeps/sweeps/sweep-1/photos'), expect.objectContaining({ method: 'POST', body: expect.any(FormData) })))
   })
 
   it('downloads the suite sweep PDF', async () => {

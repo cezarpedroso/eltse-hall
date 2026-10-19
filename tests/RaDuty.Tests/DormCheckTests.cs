@@ -66,7 +66,7 @@ public sealed class DormCheckTests
             }).Build();
             var currentUserService = new StubCurrentUserService(current);
             var service = new DormCheckPhotoService(db, currentUserService, configuration);
-            var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+            var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFgAI/ScL6+wAAAABJRU5ErkJggg==");
 
             var added = await service.AddAsync(check.Id,
                 [new DormCheckPhotoUpload("room.png", "image/png", png.Length, new MemoryStream(png))],
@@ -133,6 +133,63 @@ public sealed class DormCheckTests
         Assert.Equal("ELTS-01A", report.Suites.Single(x => x.SuiteNumber == "01").Residents.Single().RoomCode);
         Assert.Equal(saved.Id, report.Suites.Single(x => x.SuiteNumber == "01").LatestSweep?.Id);
         Assert.Contains(await db.AuditLogs.ToListAsync(), audit => audit.Action == "DORM_SUITE_SWEEP_COMPLETED");
+    }
+
+    [Fact]
+    public async Task Suite_sweep_photo_is_stored_separately_and_removed_when_sweeps_are_reset()
+    {
+        var storagePath = Path.Combine(Path.GetTempPath(), $"raduty-sweep-photo-test-{Guid.NewGuid():N}");
+        try
+        {
+            await using var db = new RaDutyDbContext(new DbContextOptionsBuilder<RaDutyDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            var hall = new ResidenceHall { Name = "Eltse Hall" };
+            var ra = new User { SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee", Role = HallRole.ResidentAssistant };
+            var sweep = new DormSuiteSweep { ResidenceHall = hall, SuiteNumber = "01", CheckedByUser = ra };
+            db.AddRange(hall, ra, sweep);
+            await db.SaveChangesAsync();
+            var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
+                null, null, ra.Role, true, hall.Id, hall.Name);
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["DormSweepPhotos:StoragePath"] = storagePath
+            }).Build();
+            var currentUserService = new StubCurrentUserService(current);
+            var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFgAI/ScL6+wAAAABJRU5ErkJggg==");
+
+            var added = await new DormSweepPhotoService(db, currentUserService, configuration).AddAsync(sweep.Id,
+                [new DormSweepPhotoUpload("suite.png", "image/png", png.Length, new MemoryStream(png))], CancellationToken.None);
+            var returned = await new DormSweepPhotoService(db, currentUserService, configuration).GetAsync(added.Single().Id, CancellationToken.None);
+
+            Assert.Equal("suite.png", returned.FileName);
+            Assert.Equal(png, returned.Content);
+            Assert.Single(await db.DormSweepPhotos.ToListAsync());
+            Assert.Empty(await db.DormCheckPhotos.ToListAsync());
+            Assert.Single(Directory.GetFiles(storagePath));
+            var otherHallUser = current with { ResidenceHallId = Guid.NewGuid() };
+            var unauthorized = await Assert.ThrowsAsync<AppException>(() => new DormSweepPhotoService(db,
+                new StubCurrentUserService(otherHallUser), configuration).GetAsync(added.Single().Id, CancellationToken.None));
+            Assert.Equal(404, unauthorized.StatusCode);
+
+            var sweepService = new DormSweepService(db, currentUserService, configuration);
+            var updated = await sweepService.SubmitAsync("01", new SubmitDormSuiteSweepRequest(true, false, false, true, true, true, false, "Updated"), CancellationToken.None);
+            var reopened = (await sweepService.GetSuitesAsync(CancellationToken.None)).Single(x => x.SuiteNumber == "01").LatestSweepDetails;
+            Assert.Equal(added.Single().Id, Assert.Single(reopened!.Photos!).Id);
+            var report = await sweepService.GetReportAsync(CancellationToken.None);
+            Assert.Equal(png, Assert.Single(report.Suites.Single(x => x.SuiteNumber == "01").Photos!).Content);
+
+            var reset = await sweepService.ResetAsync(CancellationToken.None);
+
+            Assert.Equal(2, reset.DeletedSweeps);
+            Assert.Equal(1, reset.DeletedPhotos);
+            Assert.Empty(await db.DormSuiteSweeps.ToListAsync());
+            Assert.Empty(await db.DormSweepPhotos.ToListAsync());
+            Assert.Empty(Directory.GetFiles(storagePath));
+        }
+        finally
+        {
+            if (Directory.Exists(storagePath)) Directory.Delete(storagePath, true);
+        }
     }
 
     [Fact]

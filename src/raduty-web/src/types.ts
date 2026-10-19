@@ -67,7 +67,7 @@ export interface DormRoomCheck extends DormRoomCheckSummary {
 }
 export interface DormCheckPhoto { id: string; fileName: string; contentType: string; sizeBytes: number; uploadedAt: string }
 export interface DormCheckReset { deletedChecks: number; deletedPhotos: number }
-export interface DormSweepReset { deletedSweeps: number }
+export interface DormSweepReset { deletedSweeps: number; deletedPhotos: number }
 export interface DormSuiteSweepSummary { id: string; checkedByUserId: string; checkedByName: string; checkedAt: string; hasConcerns: boolean }
 export interface DormSweepSuite {
   suiteNumber: string; latestSweep?: DormSuiteSweepSummary | null; latestSweepDetails?: DormSuiteSweep | null
@@ -75,8 +75,9 @@ export interface DormSweepSuite {
 export interface DormSuiteSweep extends DormSuiteSweepSummary {
   suiteNumber: string; isCommonAreaClean: boolean; hasMoldOrLeak: boolean
   hasFurnitureMovedToCommonArea: boolean; isBathroomClean: boolean; areToiletsAndSinksWorking: boolean
-  areShowersWorking: boolean; smellsLikeMarijuanaOrAlcohol: boolean; notes?: string | null
+  areShowersWorking: boolean; smellsLikeMarijuanaOrAlcohol: boolean; notes?: string | null; photoCount?: number; photos?: DormSweepPhoto[]
 }
+export interface DormSweepPhoto { id: string; fileName: string; contentType: string; sizeBytes: number; uploadedAt: string }
 export interface DormRosterImportIssue { rowNumber?: number | null; message: string }
 export interface DormRosterChange { type: 'Added' | 'Removed' | 'Moved' | 'Updated'; firstName: string; lastName: string; fromRoom?: string | null; toRoom?: string | null }
 export interface DormRosterImportPreview {

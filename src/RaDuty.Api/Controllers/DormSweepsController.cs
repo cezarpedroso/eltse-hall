@@ -5,7 +5,7 @@ using RaDuty.Application;
 namespace RaDuty.Api.Controllers;
 
 [ApiController, Route("api/dorm-sweeps"), Authorize(Policy = "ResidentAssistantOrDirector")]
-public sealed class DormSweepsController(IDormSweepService dormSweeps, IDormSweepPdfService pdf) : ControllerBase
+public sealed class DormSweepsController(IDormSweepService dormSweeps, IDormSweepPdfService pdf, IDormSweepPhotoService photos) : ControllerBase
 {
     [HttpGet("suites")]
     public Task<IReadOnlyList<DormSweepSuiteDto>> GetSuites(CancellationToken cancellationToken) =>
@@ -30,6 +30,29 @@ public sealed class DormSweepsController(IDormSweepService dormSweeps, IDormSwee
     [HttpDelete]
     public Task<DormSweepResetDto> Reset(CancellationToken cancellationToken) =>
         dormSweeps.ResetAsync(cancellationToken);
+
+    [HttpPost("sweeps/{sweepId:guid}/photos"), RequestSizeLimit(21 * 1024 * 1024)]
+    public async Task<ActionResult<IReadOnlyList<DormSweepPhotoDto>>> AddPhotos(Guid sweepId, [FromForm] List<IFormFile> photosToAdd, CancellationToken cancellationToken)
+    {
+        var streams = photosToAdd.Select(file => file.OpenReadStream()).ToList();
+        try
+        {
+            var uploads = photosToAdd.Select((file, index) => new DormSweepPhotoUpload(file.FileName, file.ContentType, file.Length, streams[index])).ToList();
+            var saved = await photos.AddAsync(sweepId, uploads, cancellationToken);
+            return Created($"/api/dorm-sweeps/sweeps/{sweepId}/photos", saved);
+        }
+        finally
+        {
+            foreach (var stream in streams) await stream.DisposeAsync();
+        }
+    }
+
+    [HttpGet("photos/{photoId:guid}")]
+    public async Task<IActionResult> GetPhoto(Guid photoId, CancellationToken cancellationToken)
+    {
+        var photo = await photos.GetAsync(photoId, cancellationToken);
+        return File(photo.Content, photo.ContentType);
+    }
 
     private static string Slug(string value) => string.Concat(value.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-')).Trim('-');
 }

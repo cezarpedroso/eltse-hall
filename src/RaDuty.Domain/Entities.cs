@@ -165,12 +165,24 @@ public sealed class DormSuiteSweep : Entity
     public bool SmellsLikeMarijuanaOrAlcohol { get; set; }
     public string? Notes { get; set; }
     public DateTimeOffset CheckedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<DormSweepPhoto> Photos { get; set; } = [];
 }
 
 public sealed class DormCheckPhoto : Entity
 {
     public Guid DormRoomCheckId { get; set; }
     public DormRoomCheck DormRoomCheck { get; set; } = null!;
+    public required string OriginalFileName { get; set; }
+    public required string StoredFileName { get; set; }
+    public required string ContentType { get; set; }
+    public long SizeBytes { get; set; }
+    public DateTimeOffset UploadedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class DormSweepPhoto : Entity
+{
+    public Guid DormSuiteSweepId { get; set; }
+    public DormSuiteSweep DormSuiteSweep { get; set; } = null!;
     public required string OriginalFileName { get; set; }
     public required string StoredFileName { get; set; }
     public required string ContentType { get; set; }

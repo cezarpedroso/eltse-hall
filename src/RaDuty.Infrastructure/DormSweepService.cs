@@ -1,13 +1,15 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using RaDuty.Application;
 using RaDuty.Domain;
 
 namespace RaDuty.Infrastructure;
 
-public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService currentUserService) : IDormSweepService
+public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService currentUserService, IConfiguration? configuration = null) : IDormSweepService
 {
     private const int SuiteCount = 25;
+    private readonly string photoStorageRoot = ResolvePhotoStorageRoot(configuration);
 
     public async Task<IReadOnlyList<DormSweepSuiteDto>> GetSuitesAsync(CancellationToken cancellationToken)
     {
@@ -41,7 +43,8 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
             .Select(number => number.ToString("00"))
             .Select(suiteNumber => new DormSweepSuiteReportDto(suiteNumber,
                 residentsBySuite.TryGetValue(suiteNumber, out var suiteResidents) ? suiteResidents : [],
-                latestBySuite.TryGetValue(suiteNumber, out var sweep) ? ToDto(sweep) : null))
+                latestBySuite.TryGetValue(suiteNumber, out var sweep) ? ToDto(sweep) : null,
+                sweep is null ? [] : LoadPhotosForReport(sweep.Photos)))
             .ToList();
         return new DormSweepReportDto(current.ResidenceHallName, suites);
     }
@@ -53,6 +56,11 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
         var normalizedSuiteNumber = NormalizeSuiteNumber(suiteNumber);
         var notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
         if (notes?.Length > 2000) throw new AppException(400, "NOTES_TOO_LONG", "Notes must be 2,000 characters or fewer.");
+
+        // A sweep update creates a new response; retain the latest suite's photos on that response.
+        var previous = await db.DormSuiteSweeps.Include(x => x.Photos)
+            .Where(x => x.ResidenceHallId == current.ResidenceHallId && x.SuiteNumber == normalizedSuiteNumber)
+            .OrderByDescending(x => x.CheckedAt).FirstOrDefaultAsync(cancellationToken);
 
         var sweep = new DormSuiteSweep
         {
@@ -70,6 +78,8 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
         };
 
         db.DormSuiteSweeps.Add(sweep);
+        if (previous is not null)
+            foreach (var photo in previous.Photos.ToList()) photo.DormSuiteSweep = sweep;
         db.AuditLogs.Add(new AuditLog
         {
             ActorUserId = current.Id,
@@ -90,10 +100,12 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
     {
         var current = await currentUserService.GetAsync(cancellationToken);
         var sweeps = await db.DormSuiteSweeps
+            .Include(sweep => sweep.Photos)
             .Where(sweep => sweep.ResidenceHallId == current.ResidenceHallId)
             .ToListAsync(cancellationToken);
         if (sweeps.Count == 0) return new DormSweepResetDto(0);
 
+        var storedPhotos = sweeps.SelectMany(sweep => sweep.Photos).Select(photo => photo.StoredFileName).ToList();
         db.DormSuiteSweeps.RemoveRange(sweeps);
         db.AuditLogs.Add(new AuditLog
         {
@@ -101,11 +113,12 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
             Action = "DORM_SWEEPS_RESET",
             EntityType = "ResidenceHall",
             EntityId = current.ResidenceHallId.ToString(),
-            OldValuesJson = JsonSerializer.Serialize(new { SweepCount = sweeps.Count })
+            OldValuesJson = JsonSerializer.Serialize(new { SweepCount = sweeps.Count, PhotoCount = storedPhotos.Count })
         });
         await db.SaveChangesAsync(cancellationToken);
 
-        return new DormSweepResetDto(sweeps.Count);
+        foreach (var storedPhoto in storedPhotos) DeleteStoredPhoto(storedPhoto);
+        return new DormSweepResetDto(sweeps.Count, storedPhotos.Count);
     }
 
     private static string NormalizeSuiteNumber(string suiteNumber)
@@ -129,7 +142,9 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
         sweep.CheckedByUserId, $"{sweep.CheckedByUser.FirstName} {sweep.CheckedByUser.LastName}",
         sweep.CheckedAt, sweep.IsCommonAreaClean, sweep.HasMoldOrLeak, sweep.HasFurnitureMovedToCommonArea,
         sweep.IsBathroomClean, sweep.AreToiletsAndSinksWorking, sweep.AreShowersWorking,
-        sweep.SmellsLikeMarijuanaOrAlcohol, sweep.Notes, HasConcerns(sweep));
+        sweep.SmellsLikeMarijuanaOrAlcohol, sweep.Notes, HasConcerns(sweep), sweep.Photos.Count,
+        sweep.Photos.OrderBy(photo => photo.UploadedAt).Select(photo => new DormSweepPhotoDto(photo.Id,
+            photo.OriginalFileName, photo.ContentType, photo.SizeBytes, photo.UploadedAt)).ToList());
 
     private static bool HasConcerns(DormSuiteSweep sweep) =>
         !sweep.IsCommonAreaClean || sweep.HasMoldOrLeak || sweep.HasFurnitureMovedToCommonArea ||
@@ -140,6 +155,7 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
     {
         var sweeps = await db.DormSuiteSweeps.AsNoTracking()
             .Include(x => x.CheckedByUser)
+            .Include(x => x.Photos)
             .Where(x => x.ResidenceHallId == residenceHallId)
             .OrderByDescending(x => x.CheckedAt)
             .ToListAsync(cancellationToken);
@@ -147,4 +163,36 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
     }
 
     private static string RoomCode(DormRoom room) => $"ELTS-{room.SuiteNumber}{room.RoomLetter}";
+
+    private static string ResolvePhotoStorageRoot(IConfiguration? configuration)
+    {
+        return DormSweepPhotoStorage.ResolveRoot(configuration);
+    }
+
+    private IReadOnlyList<DormSweepReportPhotoDto> LoadPhotosForReport(IEnumerable<DormSweepPhoto> photos) => photos
+        .OrderBy(photo => photo.UploadedAt)
+        .Select(photo => new { Photo = photo, Path = SafePhotoPath(photo.StoredFileName) })
+        .Where(item => File.Exists(item.Path))
+        .Select(item => new DormSweepReportPhotoDto(item.Photo.OriginalFileName, item.Photo.ContentType, File.ReadAllBytes(item.Path)))
+        .ToList();
+
+    private void DeleteStoredPhoto(string storedFileName)
+    {
+        if (!string.Equals(storedFileName, Path.GetFileName(storedFileName), StringComparison.Ordinal)) return;
+        try
+        {
+            var path = SafePhotoPath(storedFileName);
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private string SafePhotoPath(string storedFileName)
+    {
+        var path = Path.GetFullPath(Path.Combine(photoStorageRoot, storedFileName));
+        if (!path.StartsWith(photoStorageRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("The dorm sweep photo path is invalid.");
+        return path;
+    }
 }

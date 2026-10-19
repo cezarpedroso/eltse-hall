@@ -99,7 +99,7 @@ public sealed class DormSweepPdfService : IDormSweepPdfService
                     .SemiBold().FontSize(8).FontColor(suite.LatestSweep is null || suite.LatestSweep.HasConcerns ? Danger : Primary);
             });
             column.Item().Element(container => Residents(container, suite));
-            column.Item().Element(container => SweepCard(container, suite.LatestSweep));
+            column.Item().Element(container => SweepCard(container, suite.LatestSweep, suite.Photos ?? []));
         });
     }
 
@@ -131,7 +131,7 @@ public sealed class DormSweepPdfService : IDormSweepPdfService
         });
     }
 
-    private static void SweepCard(IContainer container, DormSuiteSweepDto? sweep)
+    private static void SweepCard(IContainer container, DormSuiteSweepDto? sweep, IReadOnlyList<DormSweepReportPhotoDto> photos)
     {
         container.PaddingTop(2).Column(column =>
         {
@@ -161,6 +161,19 @@ public sealed class DormSweepPdfService : IDormSweepPdfService
                 text.Span("Notes: ").SemiBold();
                 text.Span(string.IsNullOrWhiteSpace(sweep.Notes) ? "None" : sweep.Notes);
             });
+            if (photos.Count > 0)
+            {
+                column.Item().PaddingTop(2).Text($"Suite photos ({photos.Count})").SemiBold().FontSize(8).FontColor(Ink);
+                foreach (var photoRow in photos.Chunk(2))
+                {
+                    column.Item().Row(row =>
+                    {
+                        foreach (var photo in photoRow)
+                            row.RelativeItem().PaddingRight(4).Height(150).Border(1).BorderColor(Line).Padding(3).Image(photo.Content).FitArea();
+                        if (photoRow.Length == 1) row.RelativeItem();
+                    });
+                }
+            }
         });
     }
 

@@ -20,6 +20,7 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
     public DbSet<DormRoomCheck> DormRoomChecks => Set<DormRoomCheck>();
     public DbSet<DormSuiteSweep> DormSuiteSweeps => Set<DormSuiteSweep>();
     public DbSet<DormCheckPhoto> DormCheckPhotos => Set<DormCheckPhoto>();
+    public DbSet<DormSweepPhoto> DormSweepPhotos => Set<DormSweepPhoto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -133,6 +134,15 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
             entity.Property(x => x.ContentType).HasMaxLength(80);
             entity.HasIndex(x => x.StoredFileName).IsUnique();
             entity.HasOne(x => x.DormRoomCheck).WithMany(x => x.Photos).HasForeignKey(x => x.DormRoomCheckId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DormSweepPhoto>(entity =>
+        {
+            entity.Property(x => x.OriginalFileName).HasMaxLength(180);
+            entity.Property(x => x.StoredFileName).HasMaxLength(80);
+            entity.Property(x => x.ContentType).HasMaxLength(80);
+            entity.HasIndex(x => x.StoredFileName).IsUnique();
+            entity.HasOne(x => x.DormSuiteSweep).WithMany(x => x.Photos).HasForeignKey(x => x.DormSuiteSweepId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

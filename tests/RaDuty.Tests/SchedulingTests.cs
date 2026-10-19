@@ -182,7 +182,8 @@ public sealed class PersistenceAndPdfTests
             new DormSweepResidentDto(Guid.NewGuid(), "Alex", "Rivera", "ELTS-01A"),
             new DormSweepResidentDto(Guid.NewGuid(), "Sam", "Lee", "ELTS-01B")
         };
-        var suite = new DormSweepSuiteReportDto("01", residents, sweep);
+        var photo = new DormSweepReportPhotoDto("suite.png", "image/png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFgAI/ScL6+wAAAABJRU5ErkJggg=="));
+        var suite = new DormSweepSuiteReportDto("01", residents, sweep, [photo]);
 
         var bytes = new DormSweepPdfService().Render(new DormSweepReportDto("Eltse Hall", [suite]), DateTimeOffset.UtcNow);
 

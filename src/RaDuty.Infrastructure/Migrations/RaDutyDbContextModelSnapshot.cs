@@ -340,6 +340,46 @@ namespace RaDuty.Infrastructure.Migrations
                     b.ToTable("DormSuiteSweeps");
                 });
 
+            modelBuilder.Entity("RaDuty.Domain.DormSweepPhoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid>("DormSuiteSweepId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DormSuiteSweepId");
+
+                    b.HasIndex("StoredFileName")
+                        .IsUnique();
+
+                    b.ToTable("DormSweepPhotos");
+                });
+
             modelBuilder.Entity("RaDuty.Domain.DutyShift", b =>
                 {
                     b.Property<Guid>("Id")
@@ -789,6 +829,17 @@ namespace RaDuty.Infrastructure.Migrations
                     b.Navigation("ResidenceHall");
                 });
 
+            modelBuilder.Entity("RaDuty.Domain.DormSweepPhoto", b =>
+                {
+                    b.HasOne("RaDuty.Domain.DormSuiteSweep", "DormSuiteSweep")
+                        .WithMany("Photos")
+                        .HasForeignKey("DormSuiteSweepId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DormSuiteSweep");
+                });
+
             modelBuilder.Entity("RaDuty.Domain.DutyShift", b =>
                 {
                     b.HasOne("RaDuty.Domain.SchedulePeriod", "SchedulePeriod")
@@ -868,6 +919,11 @@ namespace RaDuty.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("RaDuty.Domain.DormRoomCheck", b =>
+                {
+                    b.Navigation("Photos");
+                });
+
+            modelBuilder.Entity("RaDuty.Domain.DormSuiteSweep", b =>
                 {
                     b.Navigation("Photos");
                 });

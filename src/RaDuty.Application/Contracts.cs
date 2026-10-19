@@ -91,17 +91,22 @@ public sealed record DormSuiteSweepSummaryDto(Guid Id, Guid CheckedByUserId, str
 public sealed record DormSuiteSweepDto(Guid Id, string SuiteNumber, Guid CheckedByUserId, string CheckedByName,
     DateTimeOffset CheckedAt, bool IsCommonAreaClean, bool HasMoldOrLeak,
     bool HasFurnitureMovedToCommonArea, bool IsBathroomClean, bool AreToiletsAndSinksWorking,
-    bool AreShowersWorking, bool SmellsLikeMarijuanaOrAlcohol, string? Notes, bool HasConcerns);
+    bool AreShowersWorking, bool SmellsLikeMarijuanaOrAlcohol, string? Notes, bool HasConcerns, int PhotoCount = 0,
+    IReadOnlyList<DormSweepPhotoDto>? Photos = null);
 public sealed record DormSweepSuiteDto(string SuiteNumber, DormSuiteSweepSummaryDto? LatestSweep,
     DormSuiteSweepDto? LatestSweepDetails = null);
-public sealed record DormSweepResetDto(int DeletedSweeps);
+public sealed record DormSweepResetDto(int DeletedSweeps, int DeletedPhotos = 0);
 public sealed record SubmitDormSuiteSweepRequest(bool IsCommonAreaClean, bool HasMoldOrLeak,
     bool HasFurnitureMovedToCommonArea, bool IsBathroomClean, bool AreToiletsAndSinksWorking,
     bool AreShowersWorking, bool SmellsLikeMarijuanaOrAlcohol, string? Notes);
 public sealed record DormSweepResidentDto(Guid Id, string FirstName, string LastName, string RoomCode);
 public sealed record DormSweepSuiteReportDto(string SuiteNumber, IReadOnlyList<DormSweepResidentDto> Residents,
-    DormSuiteSweepDto? LatestSweep);
+    DormSuiteSweepDto? LatestSweep, IReadOnlyList<DormSweepReportPhotoDto>? Photos = null);
 public sealed record DormSweepReportDto(string ResidenceHallName, IReadOnlyList<DormSweepSuiteReportDto> Suites);
+public sealed record DormSweepPhotoUpload(string FileName, string ContentType, long Length, Stream Content);
+public sealed record DormSweepPhotoDto(Guid Id, string FileName, string ContentType, long SizeBytes, DateTimeOffset UploadedAt);
+public sealed record DormSweepPhotoContentDto(byte[] Content, string ContentType, string FileName);
+public sealed record DormSweepReportPhotoDto(string FileName, string ContentType, byte[] Content);
 public sealed record DormRosterWorkbookUpload(string FileName, long Length, Stream Content);
 public sealed record DormRosterImportIssueDto(int? RowNumber, string Message);
 public sealed record DormRosterChangeDto(string Type, string FirstName, string LastName, string? FromRoom, string? ToRoom);
@@ -193,6 +198,12 @@ public interface IDormSweepService
 public interface IDormSweepPdfService
 {
     byte[] Render(DormSweepReportDto report, DateTimeOffset generatedAt);
+}
+
+public interface IDormSweepPhotoService
+{
+    Task<IReadOnlyList<DormSweepPhotoDto>> AddAsync(Guid sweepId, IReadOnlyList<DormSweepPhotoUpload> photos, CancellationToken cancellationToken);
+    Task<DormSweepPhotoContentDto> GetAsync(Guid photoId, CancellationToken cancellationToken);
 }
 
 public interface IDormRosterImportService

@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, AlertTriangle, CheckCircle2, ChevronRight, ClipboardList, Download, RotateCcw, Sparkles } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { AlertCircle, AlertTriangle, Camera, CheckCircle2, ChevronRight, ClipboardList, Download, ImagePlus, RotateCcw, Sparkles, Trash2 } from 'lucide-react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { api, ApiError, downloadPdf } from '../api'
 import { Dialog, ErrorState } from '../components/ui'
 import { useToast } from '../components/toast'
 import { residentQueryKeys, sharedResidentQueryOptions } from '../residentData'
-import type { DormSuiteSweep, DormSweepReset, DormSweepSuite } from '../types'
+import type { DormSuiteSweep, DormSweepPhoto, DormSweepReset, DormSweepSuite } from '../types'
 
 const sweepQuestions = [
   ['isCommonAreaClean', 'Is the common area clean?'],
@@ -87,19 +87,43 @@ function SweepSuiteCard({ suite, onSelect }: { suite: DormSweepSuite; onSelect: 
 
 function SweepDialog({ suite, onClose }: { suite: DormSweepSuite; onClose: () => void }) {
   const [form, setForm] = useState<SweepForm>(() => formFromSavedSweep(suite.latestSweepDetails))
+  const [photos, setPhotos] = useState<File[]>([])
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const savedPhotos = suite.latestSweepDetails?.photos ?? []
   const queryClient = useQueryClient()
   const toast = useToast()
   const submit = useMutation({
-    mutationFn: () => api<DormSuiteSweep>(`/api/dorm-sweeps/suites/${suite.suiteNumber}`, {
-      method: 'POST',
-      body: JSON.stringify({ ...form, notes: form.notes.trim() || null }),
-    }),
-    onSuccess: async (sweep) => {
+    mutationFn: async () => {
+      const sweep = await api<DormSuiteSweep>(`/api/dorm-sweeps/suites/${suite.suiteNumber}`, {
+        method: 'POST', body: JSON.stringify({ ...form, notes: form.notes.trim() || null }),
+      })
+      let uploadError: Error | null = null
+      if (photos.length) {
+        const body = new FormData()
+        photos.forEach((photo) => body.append('photosToAdd', photo))
+        try { await api<DormSweepPhoto[]>(`/api/dorm-sweeps/sweeps/${sweep.id}/photos`, { method: 'POST', body }) }
+        catch (error) { uploadError = error instanceof Error ? error : new Error('Picture upload failed.') }
+      }
+      return { sweep, uploadError }
+    },
+    onSuccess: async ({ sweep, uploadError }) => {
       await queryClient.invalidateQueries({ queryKey: residentQueryKeys.dormSweepSuites })
-      toast(`Suite ${sweep.suiteNumber} sweep saved`, 'success')
+      toast(uploadError ? `Suite ${sweep.suiteNumber} sweep saved, but its pictures could not be uploaded.` : `Suite ${sweep.suiteNumber} sweep saved`, uploadError ? 'error' : 'success')
       onClose()
     },
   })
+  function addPhotos(event: ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    const supported = new Set(['image/jpeg', 'image/png', 'image/webp'])
+    const invalidType = selected.find((photo) => !supported.has(photo.type.toLowerCase()))
+    const tooLarge = selected.find((photo) => photo.size > 5 * 1024 * 1024)
+    if (invalidType) { setPhotoError('Use JPEG, PNG, or WebP pictures so they can appear in the PDF.'); return }
+    if (tooLarge) { setPhotoError('Each picture must be 5 MB or smaller.'); return }
+    if (savedPhotos.length + photos.length + selected.length > 4) { setPhotoError('You can attach up to 4 pictures to one dorm sweep.'); return }
+    setPhotoError(null)
+    setPhotos((current) => [...current, ...selected])
+  }
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     submit.mutate()
@@ -108,11 +132,22 @@ function SweepDialog({ suite, onClose }: { suite: DormSweepSuite; onClose: () =>
     <div className="sweep-dialog-intro"><Sparkles /><div><strong>Bathrooms and common area</strong><span>Review the suite as one shared space.</span></div></div>
     <form className="room-check-form" onSubmit={handleSubmit}>
       {sweepQuestions.map(([key, question]) => <SweepQuestion key={key} id={key} question={question} value={form[key]} onChange={(value) => setForm({ ...form, [key]: value })} />)}
+      <section className="room-photos" aria-labelledby="sweep-photos-title"><div className="room-photos__heading"><div><strong id="sweep-photos-title">Suite pictures</strong><small>Optional · Up to 4 pictures, 5 MB each · JPEG, PNG, or WebP</small></div><span>{savedPhotos.length + photos.length}/4</span></div><div className="photo-actions"><label className="photo-action"><ImagePlus size={17} /><span>Upload pictures</span><input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={addPhotos} /></label><label className="photo-action"><Camera size={17} /><span>Take picture</span><input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={addPhotos} /></label></div>{(savedPhotos.length > 0 || photos.length > 0) && <div className="selected-photos">{savedPhotos.map((photo) => <figure className="selected-photo" key={photo.id}><img src={`/api/dorm-sweeps/photos/${photo.id}`} alt={photo.fileName} /><figcaption>{photo.fileName}</figcaption></figure>)}{photos.map((photo, index) => <SelectedPhoto file={photo} onRemove={() => setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index))} key={`${photo.name}-${photo.lastModified}-${index}`} />)}</div>}{photoError && <p className="field-error" role="alert">{photoError}</p>}</section>
       <label className="check-notes"><span>Notes</span><textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} maxLength={2000} rows={4} placeholder="Add trash, bathroom, damage, or follow-up details." /></label>
       {submit.isError && <p className="inline-error" role="alert">{submit.error instanceof ApiError ? submit.error.problem.title : 'The suite sweep could not be saved.'}</p>}
       <div className="dialog-actions"><button className="button button--primary" type="submit" disabled={submit.isPending}>{submit.isPending ? 'Saving...' : suite.latestSweepDetails ? 'Update sweep' : 'Save sweep'}</button><button className="button button--quiet" type="button" onClick={onClose}>Cancel</button></div>
     </form>
   </Dialog>
+}
+
+function SelectedPhoto({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const [url, setUrl] = useState('')
+  useEffect(() => {
+    const nextUrl = URL.createObjectURL(file)
+    setUrl(nextUrl)
+    return () => URL.revokeObjectURL(nextUrl)
+  }, [file])
+  return <figure className="selected-photo">{url && <img src={url} alt={file.name} />}<figcaption>{file.name}</figcaption><button type="button" onClick={onRemove} aria-label={`Remove ${file.name}`}><Trash2 size={14} /></button></figure>
 }
 
 function formFromSavedSweep(sweep?: DormSuiteSweep | null): SweepForm {
