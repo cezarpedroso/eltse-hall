@@ -86,7 +86,7 @@ function SweepSuiteCard({ suite, onSelect }: { suite: DormSweepSuite; onSelect: 
 }
 
 function SweepDialog({ suite, onClose }: { suite: DormSweepSuite; onClose: () => void }) {
-  const [form, setForm] = useState<SweepForm>(initialForm)
+  const [form, setForm] = useState<SweepForm>(() => formFromSavedSweep(suite.latestSweepDetails))
   const queryClient = useQueryClient()
   const toast = useToast()
   const submit = useMutation({
@@ -110,9 +110,23 @@ function SweepDialog({ suite, onClose }: { suite: DormSweepSuite; onClose: () =>
       {sweepQuestions.map(([key, question]) => <SweepQuestion key={key} id={key} question={question} value={form[key]} onChange={(value) => setForm({ ...form, [key]: value })} />)}
       <label className="check-notes"><span>Notes</span><textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} maxLength={2000} rows={4} placeholder="Add trash, bathroom, damage, or follow-up details." /></label>
       {submit.isError && <p className="inline-error" role="alert">{submit.error instanceof ApiError ? submit.error.problem.title : 'The suite sweep could not be saved.'}</p>}
-      <div className="dialog-actions"><button className="button button--primary" type="submit" disabled={submit.isPending}>{submit.isPending ? 'Saving...' : 'Save sweep'}</button><button className="button button--quiet" type="button" onClick={onClose}>Cancel</button></div>
+      <div className="dialog-actions"><button className="button button--primary" type="submit" disabled={submit.isPending}>{submit.isPending ? 'Saving...' : suite.latestSweepDetails ? 'Update sweep' : 'Save sweep'}</button><button className="button button--quiet" type="button" onClick={onClose}>Cancel</button></div>
     </form>
   </Dialog>
+}
+
+function formFromSavedSweep(sweep?: DormSuiteSweep | null): SweepForm {
+  if (!sweep) return initialForm
+  return {
+    isCommonAreaClean: sweep.isCommonAreaClean,
+    hasMoldOrLeak: sweep.hasMoldOrLeak,
+    hasFurnitureMovedToCommonArea: sweep.hasFurnitureMovedToCommonArea,
+    isBathroomClean: sweep.isBathroomClean,
+    areToiletsAndSinksWorking: sweep.areToiletsAndSinksWorking,
+    areShowersWorking: sweep.areShowersWorking,
+    smellsLikeMarijuanaOrAlcohol: sweep.smellsLikeMarijuanaOrAlcohol,
+    notes: sweep.notes ?? '',
+  }
 }
 
 function SweepQuestion({ id, question, value, onChange }: { id: string; question: string; value: boolean; onChange: (value: boolean) => void }) {

@@ -16,6 +16,12 @@ const suites: DormSweepSuite[] = [
       checkedAt: '2026-08-05T00:00:00Z',
       hasConcerns: true,
     },
+    latestSweepDetails: {
+      id: 'sweep-2', suiteNumber: '02', checkedByUserId: 'ra-1', checkedByName: 'Jordan Lee',
+      checkedAt: '2026-08-05T00:00:00Z', isCommonAreaClean: false, hasMoldOrLeak: true,
+      hasFurnitureMovedToCommonArea: false, isBathroomClean: true, areToiletsAndSinksWorking: true,
+      areShowersWorking: false, smellsLikeMarijuanaOrAlcohol: false, notes: 'Saved suite note.', hasConcerns: true,
+    },
   },
 ]
 let resetFailure = false
@@ -86,6 +92,19 @@ describe('Dorm sweeps', () => {
       smellsLikeMarijuanaOrAlcohol: true,
       notes: 'Trash needs pickup.',
     })
+  })
+
+  it('reopens a saved sweep with its recorded answers and notes', async () => {
+    renderPage()
+    await screen.findByRole('button', { name: /Suite 02/ })
+
+    fireEvent.click(screen.getByRole('button', { name: /Suite 02/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Suite 02 sweep' })
+    expect(within(dialog).getByLabelText('No', { selector: 'input[name="isCommonAreaClean"]' })).toBeChecked()
+    expect(within(dialog).getByLabelText('Yes', { selector: 'input[name="hasMoldOrLeak"]' })).toBeChecked()
+    expect(within(dialog).getByLabelText('No', { selector: 'input[name="areShowersWorking"]' })).toBeChecked()
+    expect(within(dialog).getByLabelText('Notes')).toHaveValue('Saved suite note.')
+    expect(within(dialog).getByRole('button', { name: 'Update sweep' })).toBeInTheDocument()
   })
 
   it('downloads the suite sweep PDF', async () => {

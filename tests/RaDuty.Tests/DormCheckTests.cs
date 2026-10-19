@@ -34,6 +34,10 @@ public sealed class DormCheckTests
         Assert.Null(saved.IsCommonAreaClean);
         Assert.Equal("No issues.", saved.Notes);
         Assert.Equal(ra.Id, (await db.DormRoomChecks.SingleAsync()).CheckedByUserId);
+        var reopenedRoom = (await service.GetSuitesAsync(CancellationToken.None)).Single().Rooms.Single();
+        Assert.Equal(saved.Id, reopenedRoom.LatestCheckDetails?.Id);
+        Assert.True(reopenedRoom.LatestCheckDetails?.IsRoomClean);
+        Assert.Equal("No issues.", reopenedRoom.LatestCheckDetails?.Notes);
     }
 
     [Fact]
@@ -82,6 +86,8 @@ public sealed class DormCheckTests
             Assert.Empty(await db.DormRoomChecks.ToListAsync());
             Assert.Empty(await db.DormCheckPhotos.ToListAsync());
             Assert.Empty(Directory.GetFiles(storagePath));
+            Assert.Null((await new DormCheckService(db, currentUserService, configuration).GetSuitesAsync(CancellationToken.None))
+                .Single().Rooms.Single().LatestCheckDetails);
             Assert.Contains(await db.AuditLogs.ToListAsync(), audit => audit.Action == "DORM_CHECKS_RESET" && audit.ActorUserId == ra.Id);
         }
         finally
@@ -122,6 +128,8 @@ public sealed class DormCheckTests
         Assert.Equal("Mold by the sink.", saved.Notes);
         Assert.Equal(25, suites.Count);
         Assert.Equal(saved.Id, suites.Single(x => x.SuiteNumber == "01").LatestSweep?.Id);
+        Assert.Equal(saved.Id, suites.Single(x => x.SuiteNumber == "01").LatestSweepDetails?.Id);
+        Assert.True(suites.Single(x => x.SuiteNumber == "01").LatestSweepDetails?.HasMoldOrLeak);
         Assert.Equal("ELTS-01A", report.Suites.Single(x => x.SuiteNumber == "01").Residents.Single().RoomCode);
         Assert.Equal(saved.Id, report.Suites.Single(x => x.SuiteNumber == "01").LatestSweep?.Id);
         Assert.Contains(await db.AuditLogs.ToListAsync(), audit => audit.Action == "DORM_SUITE_SWEEP_COMPLETED");
@@ -160,6 +168,7 @@ public sealed class DormCheckTests
 
         Assert.Equal(2, reset.DeletedSweeps);
         Assert.Equal(0, emptyReset.DeletedSweeps);
+        Assert.Null((await service.GetSuitesAsync(CancellationToken.None)).Single(x => x.SuiteNumber == "01").LatestSweepDetails);
         Assert.Collection(await db.DormSuiteSweeps.ToListAsync(), sweep => Assert.Equal(otherHall.Id, sweep.ResidenceHallId));
         Assert.Single(await db.DormRoomChecks.ToListAsync());
         var audit = Assert.Single(await db.AuditLogs.ToListAsync());

@@ -17,7 +17,8 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
         return Enumerable.Range(1, SuiteCount)
             .Select(number => number.ToString("00"))
             .Select(suiteNumber => new DormSweepSuiteDto(suiteNumber,
-                latestBySuite.TryGetValue(suiteNumber, out var sweep) ? ToSummaryDto(sweep) : null))
+                latestBySuite.TryGetValue(suiteNumber, out var sweep) ? ToSummaryDto(sweep) : null,
+                sweep is null ? null : ToDto(sweep)))
             .ToList();
     }
 

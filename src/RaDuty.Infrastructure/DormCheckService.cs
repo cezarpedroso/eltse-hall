@@ -23,7 +23,8 @@ public sealed class DormCheckService(RaDutyDbContext db, ICurrentUserService cur
                     room.Residents.OrderBy(x => x.LastName).ThenBy(x => x.FirstName)
                         .Select(x => new DormResidentDto(x.Id, x.FirstName, x.LastName)).ToList(),
                     latest is null ? null : new DormRoomCheckSummaryDto(latest.Id, latest.CheckedByUserId,
-                        $"{latest.CheckedByUser.FirstName} {latest.CheckedByUser.LastName}", latest.CheckedAt, latest.Photos.Count));
+                        $"{latest.CheckedByUser.FirstName} {latest.CheckedByUser.LastName}", latest.CheckedAt, latest.Photos.Count),
+                    latest is null ? null : ToDto(latest, room));
             }).ToList())).ToList();
     }
 

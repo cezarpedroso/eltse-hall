@@ -28,6 +28,7 @@ export function DormCheckPage() {
     onSuccess: async ({ deletedChecks }) => {
       setConfirmReset(false)
       setOpenSuite(null)
+      setSelectedRoom(null)
       await queryClient.invalidateQueries({ queryKey: residentQueryKeys.dormCheckSuites })
       toast(`${deletedChecks} dorm check${deletedChecks === 1 ? '' : 's'} reset`, 'success')
     },
@@ -77,7 +78,7 @@ const initialForm: FormState = {
 }
 
 function RoomCheckDialog({ room, onClose }: { room: DormRoom; onClose: () => void }) {
-  const [form, setForm] = useState<FormState>(initialForm)
+  const [form, setForm] = useState<FormState>(() => formFromSavedCheck(room.latestCheckDetails))
   const [photos, setPhotos] = useState<File[]>([])
   const [photoError, setPhotoError] = useState<string | null>(null)
   const queryClient = useQueryClient()
@@ -126,10 +127,27 @@ function RoomCheckDialog({ room, onClose }: { room: DormRoom; onClose: () => voi
       <section className="room-photos" aria-labelledby="room-photos-title"><div className="room-photos__heading"><div><strong id="room-photos-title">Room pictures</strong><small>Optional · Up to 4 pictures, 5 MB each</small></div><span>{photos.length}/4</span></div><div className="photo-actions"><label className="photo-action"><ImagePlus size={17} /><span>Upload pictures</span><input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple onChange={addPhotos} /></label><label className="photo-action"><Camera size={17} /><span>Take picture</span><input className="sr-only" type="file" accept="image/*" capture="environment" onChange={addPhotos} /></label></div>{photos.length > 0 && <div className="selected-photos">{photos.map((photo, index) => <SelectedPhoto file={photo} onRemove={() => setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index))} key={`${photo.name}-${photo.lastModified}-${index}`} />)}</div>}{photoError && <p className="field-error" role="alert">{photoError}</p>}</section>
       <label className="check-notes"><span>Notes</span><textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} maxLength={2000} rows={4} placeholder="Add damage details or anything the team should know." /></label>
       {submit.isError && <p className="inline-error" role="alert">{submit.error instanceof ApiError ? submit.error.problem.title : 'The room check could not be saved.'}</p>}
-      <div className="dialog-actions"><button className="button button--primary" type="submit" disabled={submit.isPending}>{submit.isPending ? 'Saving…' : 'Complete room check'}</button><button className="button button--quiet" type="button" onClick={onClose}>Cancel</button></div>
+      <div className="dialog-actions"><button className="button button--primary" type="submit" disabled={submit.isPending}>{submit.isPending ? 'Saving…' : room.latestCheckDetails ? 'Update room check' : 'Complete room check'}</button><button className="button button--quiet" type="button" onClick={onClose}>Cancel</button></div>
     </form>
   </Dialog>
 }
+
+function formFromSavedCheck(check?: DormRoomCheck | null): FormState {
+  if (!check) return initialForm
+  return {
+    isRoomClean: answer(check.isRoomClean),
+    isAllFurniturePresent: answer(check.isAllFurniturePresent),
+    isSmokeDetectorClear: answer(check.isSmokeDetectorClear),
+    isRoomOdorFree: answer(check.isRoomOdorFree),
+    isRoomTrashFree: answer(check.isRoomTrashFree),
+    isCommonAreaClean: check.isCommonAreaClean === null || check.isCommonAreaClean === undefined ? 'na' : answer(check.isCommonAreaClean),
+    isRoomAlcoholFree: answer(check.isRoomAlcoholFree),
+    isRoomDamageFree: answer(check.isRoomDamageFree),
+    notes: check.notes ?? '',
+  }
+}
+
+function answer(value: boolean): Answer { return value ? 'yes' : 'no' }
 
 function SelectedPhoto({ file, onRemove }: { file: File; onRemove: () => void }) {
   const [url, setUrl] = useState('')

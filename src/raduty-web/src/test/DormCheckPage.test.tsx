@@ -7,7 +7,7 @@ import type { DormSuite } from '../types'
 
 const suites: DormSuite[] = [{
   suiteNumber: '01', rooms: [
-    { id: 'room-a', roomCode: 'ELTS-01A', roomLetter: 'A', residents: [{ id: 'r1', firstName: 'Alex', lastName: 'Rivera' }, { id: 'r2', firstName: 'Sam', lastName: 'Lee' }], latestCheck: { id: 'existing-check', checkedByUserId: 'ra-1', checkedByName: 'Jordan Lee', checkedAt: '2026-08-05T00:00:00Z', photoCount: 1 } },
+    { id: 'room-a', roomCode: 'ELTS-01A', roomLetter: 'A', residents: [{ id: 'r1', firstName: 'Alex', lastName: 'Rivera' }, { id: 'r2', firstName: 'Sam', lastName: 'Lee' }], latestCheck: { id: 'existing-check', checkedByUserId: 'ra-1', checkedByName: 'Jordan Lee', checkedAt: '2026-08-05T00:00:00Z', photoCount: 1 }, latestCheckDetails: { id: 'existing-check', dormRoomId: 'room-a', roomCode: 'ELTS-01A', checkedByUserId: 'ra-1', checkedByName: 'Jordan Lee', checkedAt: '2026-08-05T00:00:00Z', isRoomClean: false, isAllFurniturePresent: true, isSmokeDetectorClear: true, isRoomOdorFree: false, isRoomTrashFree: true, isCommonAreaClean: null, isRoomAlcoholFree: true, isRoomDamageFree: false, notes: 'Saved room note.', photoCount: 1 } },
     { id: 'room-b', roomCode: 'ELTS-01B', roomLetter: 'B', residents: [] },
     { id: 'room-c', roomCode: 'ELTS-01C', roomLetter: 'C', residents: [] },
     { id: 'room-d', roomCode: 'ELTS-01D', roomLetter: 'D', residents: [] },
@@ -43,12 +43,16 @@ describe('Dorm checks', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Room A/ }))
     expect(screen.getByRole('dialog', { name: 'ELTS-01A check' })).toBeInTheDocument()
+    expect(screen.getByLabelText('No', { selector: 'input[name="isRoomClean"]' })).toBeChecked()
+    expect(screen.getByLabelText('N/A', { selector: 'input[name="isCommonAreaClean"]' })).toBeChecked()
+    expect(screen.getByLabelText('Notes')).toHaveValue('Saved room note.')
+    expect(screen.getByRole('button', { name: 'Update room check' })).toBeInTheDocument()
     screen.getAllByLabelText('Yes').forEach((option) => fireEvent.click(option))
     fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'No issues.' } })
     const picture = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], 'room.png', { type: 'image/png' })
     fireEvent.change(screen.getByLabelText('Upload pictures'), { target: { files: [picture] } })
     expect(screen.getByAltText('room.png')).toHaveAttribute('src', 'blob:room-picture')
-    fireEvent.click(screen.getByRole('button', { name: 'Complete room check' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Update room check' }))
 
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/dorm-checks/rooms/room-a'), expect.objectContaining({ method: 'POST' })))
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/dorm-checks/checks/check-1/photos'), expect.objectContaining({ method: 'POST', body: expect.any(FormData) })))

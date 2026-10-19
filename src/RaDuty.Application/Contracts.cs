@@ -67,13 +67,14 @@ public sealed record UpdateUserRequest(string? RoomNumber, string? PhoneNumber, 
 
 public sealed record DormResidentDto(Guid Id, string FirstName, string LastName);
 public sealed record DormRoomCheckSummaryDto(Guid Id, Guid CheckedByUserId, string CheckedByName, DateTimeOffset CheckedAt, int PhotoCount = 0);
-public sealed record DormRoomDto(Guid Id, string RoomCode, string RoomLetter,
-    IReadOnlyList<DormResidentDto> Residents, DormRoomCheckSummaryDto? LatestCheck);
-public sealed record DormSuiteDto(string SuiteNumber, IReadOnlyList<DormRoomDto> Rooms);
 public sealed record DormRoomCheckDto(Guid Id, Guid DormRoomId, string RoomCode, Guid CheckedByUserId,
     string CheckedByName, DateTimeOffset CheckedAt, bool IsRoomClean, bool IsAllFurniturePresent,
     bool IsSmokeDetectorClear, bool IsRoomOdorFree, bool IsRoomTrashFree, bool? IsCommonAreaClean,
     bool IsRoomAlcoholFree, bool IsRoomDamageFree, string? Notes, int PhotoCount = 0);
+public sealed record DormRoomDto(Guid Id, string RoomCode, string RoomLetter,
+    IReadOnlyList<DormResidentDto> Residents, DormRoomCheckSummaryDto? LatestCheck,
+    DormRoomCheckDto? LatestCheckDetails = null);
+public sealed record DormSuiteDto(string SuiteNumber, IReadOnlyList<DormRoomDto> Rooms);
 public sealed record DormRoomReportDto(Guid Id, string RoomCode, string RoomLetter,
     IReadOnlyList<DormResidentDto> Residents, DormRoomCheckDto? LatestCheck);
 public sealed record DormSuiteReportDto(string SuiteNumber, IReadOnlyList<DormRoomReportDto> Rooms);
@@ -87,11 +88,12 @@ public sealed record DormCheckPhotoContentDto(byte[] Content, string ContentType
 public sealed record DormCheckResetDto(int DeletedChecks, int DeletedPhotos);
 public sealed record DormSuiteSweepSummaryDto(Guid Id, Guid CheckedByUserId, string CheckedByName,
     DateTimeOffset CheckedAt, bool HasConcerns);
-public sealed record DormSweepSuiteDto(string SuiteNumber, DormSuiteSweepSummaryDto? LatestSweep);
 public sealed record DormSuiteSweepDto(Guid Id, string SuiteNumber, Guid CheckedByUserId, string CheckedByName,
     DateTimeOffset CheckedAt, bool IsCommonAreaClean, bool HasMoldOrLeak,
     bool HasFurnitureMovedToCommonArea, bool IsBathroomClean, bool AreToiletsAndSinksWorking,
     bool AreShowersWorking, bool SmellsLikeMarijuanaOrAlcohol, string? Notes, bool HasConcerns);
+public sealed record DormSweepSuiteDto(string SuiteNumber, DormSuiteSweepSummaryDto? LatestSweep,
+    DormSuiteSweepDto? LatestSweepDetails = null);
 public sealed record DormSweepResetDto(int DeletedSweeps);
 public sealed record SubmitDormSuiteSweepRequest(bool IsCommonAreaClean, bool HasMoldOrLeak,
     bool HasFurnitureMovedToCommonArea, bool IsBathroomClean, bool AreToiletsAndSinksWorking,

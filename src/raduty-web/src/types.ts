@@ -57,6 +57,7 @@ export interface DormResident { id: string; firstName: string; lastName: string 
 export interface DormRoomCheckSummary { id: string; checkedByUserId: string; checkedByName: string; checkedAt: string; photoCount: number }
 export interface DormRoom {
   id: string; roomCode: string; roomLetter: string; residents: DormResident[]; latestCheck?: DormRoomCheckSummary | null
+  latestCheckDetails?: DormRoomCheck | null
 }
 export interface DormSuite { suiteNumber: string; rooms: DormRoom[] }
 export interface DormRoomCheck extends DormRoomCheckSummary {
@@ -68,7 +69,9 @@ export interface DormCheckPhoto { id: string; fileName: string; contentType: str
 export interface DormCheckReset { deletedChecks: number; deletedPhotos: number }
 export interface DormSweepReset { deletedSweeps: number }
 export interface DormSuiteSweepSummary { id: string; checkedByUserId: string; checkedByName: string; checkedAt: string; hasConcerns: boolean }
-export interface DormSweepSuite { suiteNumber: string; latestSweep?: DormSuiteSweepSummary | null }
+export interface DormSweepSuite {
+  suiteNumber: string; latestSweep?: DormSuiteSweepSummary | null; latestSweepDetails?: DormSuiteSweep | null
+}
 export interface DormSuiteSweep extends DormSuiteSweepSummary {
   suiteNumber: string; isCommonAreaClean: boolean; hasMoldOrLeak: boolean
   hasFurnitureMovedToCommonArea: boolean; isBathroomClean: boolean; areToiletsAndSinksWorking: boolean
