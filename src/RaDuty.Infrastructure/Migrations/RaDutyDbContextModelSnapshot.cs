@@ -462,6 +462,119 @@ namespace RaDuty.Infrastructure.Migrations
                     b.ToTable("HallMemberships");
                 });
 
+            modelBuilder.Entity("RaDuty.Domain.IncidentReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("AlcoholOunces")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("IncidentType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<decimal?>("InfractionPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ReportedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ResidenceHallId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportedByUserId");
+
+                    b.HasIndex("ResidenceHallId", "OccurredAt");
+
+                    b.ToTable("IncidentReports");
+                });
+
+            modelBuilder.Entity("RaDuty.Domain.IncidentStaffMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IncidentReportId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("IncidentReportId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("IncidentStaffMembers");
+                });
+
+            modelBuilder.Entity("RaDuty.Domain.IncidentStudent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid>("IncidentReportId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("RoomLetter")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("nvarchar(4)");
+
+                    b.Property<string>("RoomNumber")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IncidentReportId");
+
+                    b.ToTable("IncidentStudents");
+                });
+
             modelBuilder.Entity("RaDuty.Domain.ResidenceHall", b =>
                 {
                     b.Property<Guid>("Id")
@@ -870,6 +983,55 @@ namespace RaDuty.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("RaDuty.Domain.IncidentReport", b =>
+                {
+                    b.HasOne("RaDuty.Domain.User", "ReportedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReportedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RaDuty.Domain.ResidenceHall", "ResidenceHall")
+                        .WithMany("IncidentReports")
+                        .HasForeignKey("ResidenceHallId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ReportedByUser");
+
+                    b.Navigation("ResidenceHall");
+                });
+
+            modelBuilder.Entity("RaDuty.Domain.IncidentStaffMember", b =>
+                {
+                    b.HasOne("RaDuty.Domain.IncidentReport", "IncidentReport")
+                        .WithMany("StaffPresent")
+                        .HasForeignKey("IncidentReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RaDuty.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IncidentReport");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RaDuty.Domain.IncidentStudent", b =>
+                {
+                    b.HasOne("RaDuty.Domain.IncidentReport", "IncidentReport")
+                        .WithMany("Students")
+                        .HasForeignKey("IncidentReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IncidentReport");
+                });
+
             modelBuilder.Entity("RaDuty.Domain.SchedulePeriod", b =>
                 {
                     b.HasOne("RaDuty.Domain.ResidenceHall", "ResidenceHall")
@@ -933,11 +1095,20 @@ namespace RaDuty.Infrastructure.Migrations
                     b.Navigation("Assignments");
                 });
 
+            modelBuilder.Entity("RaDuty.Domain.IncidentReport", b =>
+                {
+                    b.Navigation("StaffPresent");
+
+                    b.Navigation("Students");
+                });
+
             modelBuilder.Entity("RaDuty.Domain.ResidenceHall", b =>
                 {
                     b.Navigation("DormRooms");
 
                     b.Navigation("DormSuiteSweeps");
+
+                    b.Navigation("IncidentReports");
 
                     b.Navigation("Memberships");
 

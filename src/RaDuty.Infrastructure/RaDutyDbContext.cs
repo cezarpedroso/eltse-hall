@@ -21,6 +21,9 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
     public DbSet<DormSuiteSweep> DormSuiteSweeps => Set<DormSuiteSweep>();
     public DbSet<DormCheckPhoto> DormCheckPhotos => Set<DormCheckPhoto>();
     public DbSet<DormSweepPhoto> DormSweepPhotos => Set<DormSweepPhoto>();
+    public DbSet<IncidentReport> IncidentReports => Set<IncidentReport>();
+    public DbSet<IncidentStaffMember> IncidentStaffMembers => Set<IncidentStaffMember>();
+    public DbSet<IncidentStudent> IncidentStudents => Set<IncidentStudent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,6 +146,35 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
             entity.Property(x => x.ContentType).HasMaxLength(80);
             entity.HasIndex(x => x.StoredFileName).IsUnique();
             entity.HasOne(x => x.DormSuiteSweep).WithMany(x => x.Photos).HasForeignKey(x => x.DormSuiteSweepId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IncidentReport>(entity =>
+        {
+            entity.Property(x => x.IncidentType).HasConversion<string>().HasMaxLength(32);
+            entity.Property(x => x.Location).HasMaxLength(160);
+            entity.Property(x => x.Description).HasMaxLength(4000);
+            entity.Property(x => x.AlcoholOunces).HasPrecision(8, 2);
+            entity.Property(x => x.InfractionPrice).HasPrecision(10, 2);
+            entity.HasIndex(x => new { x.ResidenceHallId, x.OccurredAt });
+            entity.HasOne(x => x.ResidenceHall).WithMany(x => x.IncidentReports).HasForeignKey(x => x.ResidenceHallId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ReportedByUser).WithMany().HasForeignKey(x => x.ReportedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<IncidentStaffMember>(entity =>
+        {
+            entity.HasIndex(x => new { x.IncidentReportId, x.UserId }).IsUnique();
+            entity.HasOne(x => x.IncidentReport).WithMany(x => x.StaffPresent).HasForeignKey(x => x.IncidentReportId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<IncidentStudent>(entity =>
+        {
+            entity.Property(x => x.FirstName).HasMaxLength(80);
+            entity.Property(x => x.LastName).HasMaxLength(80);
+            entity.Property(x => x.StudentId).HasMaxLength(40);
+            entity.Property(x => x.RoomNumber).HasMaxLength(10);
+            entity.Property(x => x.RoomLetter).HasMaxLength(4);
+            entity.HasOne(x => x.IncidentReport).WithMany(x => x.Students).HasForeignKey(x => x.IncidentReportId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -19,6 +19,7 @@ const AuditLogPage = lazy(() => import('./pages/AdminPages').then((module) => ({
 const UserManagementPage = lazy(() => import('./pages/AdminPages').then((module) => ({ default: module.UserManagementPage })))
 const DormRosterImportPage = lazy(() => import('./pages/DormRosterImportPage').then((module) => ({ default: module.DormRosterImportPage })))
 const ResidentManagementPage = lazy(() => import('./pages/ResidentManagementPage').then((module) => ({ default: module.ResidentManagementPage })))
+const IncidentReportsPage = lazy(() => import('./pages/IncidentReportsPage').then((module) => ({ default: module.IncidentReportsPage })))
 
 export default function App() {
   const queryClient = useQueryClient()
@@ -38,6 +39,7 @@ export default function App() {
     <Route path="/dorm-checks" element={<DormCheckPage />} />
     <Route path="/dorm-sweeps" element={<DormSweepPage />} />
     <Route path="/residents" element={<ResidentManagementPage user={me.data} />} />
+    <Route path="/incidents" element={<IncidentReportsPage user={me.data} />} />
     <Route path="/directory" element={<DirectoryPage />} />
     <Route path="/profile" element={<ProfilePage user={me.data} />} />
     <Route path="/admin" element={me.data.role === 'HallDirector' || me.data.role === 'Admin' ? <AdminDashboardPage /> : <Navigate to="/" replace />} />

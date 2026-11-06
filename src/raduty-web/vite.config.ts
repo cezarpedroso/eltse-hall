@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': { target: 'https://localhost:7149', changeOrigin: true, secure: false },
-      '/health': { target: 'https://localhost:7149', changeOrigin: true, secure: false },
-      '/openapi': { target: 'https://localhost:7149', changeOrigin: true, secure: false },
+      '/api': { target: 'http://localhost:5110', changeOrigin: true },
+      '/health': { target: 'http://localhost:5110', changeOrigin: true },
+      '/openapi': { target: 'http://localhost:5110', changeOrigin: true },
     },
   },
   test: {

@@ -1,0 +1,82 @@
+import { useState, type FormEvent } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, Download, FilePlus2, Minus, Plus, ShieldCheck, UsersRound } from 'lucide-react'
+import { api, ApiError, downloadPdf } from '../api'
+import { EmptyState, ErrorState } from '../components/ui'
+import { useToast } from '../components/toast'
+import type { CurrentUser, IncidentReport, IncidentReportSummary, IncidentType, ResidentAssistant } from '../types'
+
+type StudentDraft = { firstName: string; lastName: string; studentId: string; roomNumber: string; roomLetter: string }
+type IncidentForm = { incidentType: IncidentType; occurredAt: string; location: string; description: string; alcoholOunces: string; infractionPrice: string; staffPresentUserIds: string[]; students: StudentDraft[] }
+
+const incidentTypes: Array<[IncidentType, string]> = [
+  ['Alcohol', 'Alcohol found'], ['Smoking', 'Smoking'], ['SmokeDetectorCovered', 'Smoke detector covered'],
+  ['Fight', 'Fight'], ['IllegalAppliance', 'Illegal appliance'], ['LoudNoise', 'Loud noise'],
+  ['UnauthorizedRoomMove', 'Unauthorized room move'], ['Assault', 'Assault'], ['Other', 'Other'],
+]
+
+function emptyStudent(): StudentDraft { return { firstName: '', lastName: '', studentId: '', roomNumber: '', roomLetter: '' } }
+function initialForm(): IncidentForm { return { incidentType: 'Alcohol', occurredAt: localDateTime(), location: '', description: '', alcoholOunces: '', infractionPrice: '', staffPresentUserIds: [], students: [emptyStudent()] } }
+function localDateTime() {
+  const date = new Date()
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset())
+  return date.toISOString().slice(0, 16)
+}
+function typeLabel(type: IncidentType) { return incidentTypes.find(([value]) => value === type)?.[1] ?? type }
+
+export function IncidentReportsPage({ user }: { user: CurrentUser }) {
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState<IncidentForm>(initialForm)
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const reports = useQuery({ queryKey: ['incident-reports'], queryFn: ({ signal }) => api<IncidentReportSummary[]>('/api/incidents', {}, signal) })
+  const directory = useQuery({ queryKey: ['incident-staff'], queryFn: ({ signal }) => api<ResidentAssistant[]>('/api/resident-assistants', {}, signal), enabled: showForm })
+  const create = useMutation({
+    mutationFn: () => api<IncidentReport>('/api/incidents', {
+      method: 'POST', body: JSON.stringify({
+        incidentType: form.incidentType, occurredAt: new Date(form.occurredAt).toISOString(), location: form.location,
+        description: form.description, alcoholOunces: form.incidentType === 'Alcohol' && form.alcoholOunces ? Number(form.alcoholOunces) : null,
+        infractionPrice: form.infractionPrice ? Number(form.infractionPrice) : null, staffPresentUserIds: form.staffPresentUserIds,
+        students: form.students,
+      }),
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['incident-reports'] })
+      setForm(initialForm()); setShowForm(false); toast('Incident report saved. You can download its PDF from the report list.')
+    },
+  })
+  function beginReport() { setForm(initialForm()); setShowForm(true) }
+  function updateStudent(index: number, field: keyof StudentDraft, value: string) {
+    setForm((current) => ({ ...current, students: current.students.map((student, studentIndex) => studentIndex === index ? { ...student, [field]: value } : student) }))
+  }
+  function removeStudent(index: number) { setForm((current) => ({ ...current, students: current.students.filter((_, studentIndex) => studentIndex !== index) })) }
+  function addStaff(userId: string) { if (userId) setForm((current) => current.staffPresentUserIds.includes(userId) ? current : { ...current, staffPresentUserIds: [...current.staffPresentUserIds, userId] }) }
+  function submit(event: FormEvent) { event.preventDefault(); create.mutate() }
+  const staff = (directory.data ?? []).filter((member) => member.id !== user.id)
+  const selectedStaff = staff.filter((member) => form.staffPresentUserIds.includes(member.id))
+  return <div className="page page--form incident-page">
+    <header className="page-heading incident-heading"><div><span className="eyebrow">Residence life records</span><h1>Incident reports</h1><p>Document what happened, who was involved, and any applicable infraction price.</p></div><button className="button button--primary" type="button" onClick={beginReport}><FilePlus2 size={17} />New incident report</button></header>
+
+    {showForm && <section className="incident-form-panel" aria-labelledby="incident-form-title">
+      <div className="incident-form-panel__header"><div><span className="eyebrow">New report</span><h2 id="incident-form-title">Incident details</h2><p>Facts only. Reports are restricted to authorized Residence Life staff.</p></div><button className="text-button" type="button" onClick={() => setShowForm(false)}>Cancel</button></div>
+      <form className="incident-form" onSubmit={submit}>
+        <div className="form-grid"><label className="field"><span>Incident type</span><select value={form.incidentType} onChange={(event) => setForm({ ...form, incidentType: event.target.value as IncidentType })}>{incidentTypes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label><label className="field"><span>Date and time it happened</span><input type="datetime-local" value={form.occurredAt} onChange={(event) => setForm({ ...form, occurredAt: event.target.value })} required /></label><label className="field field--wide"><span>Location</span><input value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} maxLength={160} placeholder="Example: ELTS-12B, east hallway, main lobby" required /></label></div>
+        {form.incidentType === 'Assault' && <div className="incident-safety" role="note"><AlertTriangle size={20} /><div><strong>Immediate safety first</strong><span>For an active emergency or immediate danger, contact campus safety or 911 before completing this report.</span></div></div>}
+        {form.incidentType === 'Alcohol' && <label className="field incident-amount"><span>Alcohol found (ounces)</span><input type="number" inputMode="decimal" min="0.01" max="10000" step="0.01" value={form.alcoholOunces} onChange={(event) => setForm({ ...form, alcoholOunces: event.target.value })} placeholder="Example: 12" required /></label>}
+        <label className="field"><span>Infraction price <small>Optional</small></span><div className="currency-input"><span>$</span><input type="number" inputMode="decimal" min="0" max="1000000" step="0.01" value={form.infractionPrice} onChange={(event) => setForm({ ...form, infractionPrice: event.target.value })} placeholder="0.00" /></div></label>
+        <section className="incident-staff" aria-labelledby="incident-staff-title"><div className="incident-section-heading"><div><h2 id="incident-staff-title">Staff</h2><p><strong>Reporter:</strong> {user.firstName} {user.lastName} (saved automatically)</p></div></div><label className="field"><span>Other RAs or staff present <small>Optional</small></span><select value="" onChange={(event) => addStaff(event.target.value)} disabled={directory.isLoading}><option value="">{directory.isLoading ? 'Loading staff…' : 'Select a staff member to add'}</option>{staff.filter((member) => !form.staffPresentUserIds.includes(member.id)).map((member) => <option value={member.id} key={member.id}>{member.firstName} {member.lastName} · {member.role === 'ResidentAssistant' ? 'RA' : member.role === 'HallDirector' ? 'Hall Director' : 'Admin'}</option>)}</select></label>{selectedStaff.length > 0 && <ul className="incident-staff-list">{selectedStaff.map((member) => <li key={member.id}><span>{member.firstName} {member.lastName}</span><button type="button" aria-label={`Remove ${member.firstName} ${member.lastName}`} onClick={() => setForm((current) => ({ ...current, staffPresentUserIds: current.staffPresentUserIds.filter((id) => id !== member.id) }))}><Minus size={15} />Remove</button></li>)}</ul>}</section>
+        <section className="incident-students" aria-labelledby="incident-students-title"><div className="incident-section-heading"><div><h2 id="incident-students-title">Students involved</h2><p>Add every student connected to this incident.</p></div><button className="button button--quiet" type="button" onClick={() => setForm((current) => ({ ...current, students: [...current.students, emptyStudent()] }))}><Plus size={16} />Add student</button></div>{form.students.map((student, index) => <fieldset className="incident-student" key={index}><legend>Student {index + 1}</legend><div className="incident-student__top">{form.students.length > 1 && <button className="text-button incident-student__remove" type="button" onClick={() => removeStudent(index)}><Minus size={15} />Remove student</button>}</div><div className="form-grid"><label className="field"><span>First name</span><input value={student.firstName} onChange={(event) => updateStudent(index, 'firstName', event.target.value)} maxLength={80} required /></label><label className="field"><span>Last name</span><input value={student.lastName} onChange={(event) => updateStudent(index, 'lastName', event.target.value)} maxLength={80} required /></label><label className="field"><span>Student ID</span><input value={student.studentId} onChange={(event) => updateStudent(index, 'studentId', event.target.value)} maxLength={40} required /></label><label className="field"><span>Room number</span><input value={student.roomNumber} onChange={(event) => updateStudent(index, 'roomNumber', event.target.value)} maxLength={10} placeholder="12" required /></label><label className="field"><span>Room letter</span><input value={student.roomLetter} onChange={(event) => updateStudent(index, 'roomLetter', event.target.value.toUpperCase())} maxLength={4} placeholder="B" required /></label></div></fieldset>)}</section>
+        <label className="field"><span>Description of what happened</span><textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} maxLength={4000} rows={7} placeholder="Include the observable facts, actions taken, and relevant follow-up information." required /></label>
+        {create.isError && <p className="inline-error" role="alert">{create.error instanceof ApiError ? create.error.problem.title : 'The incident report could not be saved.'}</p>}
+        <div className="form-actions"><button className="button button--primary" type="submit" disabled={create.isPending}>{create.isPending ? 'Saving report…' : 'Save incident report'}</button><button className="button button--quiet" type="button" onClick={() => setShowForm(false)} disabled={create.isPending}>Cancel</button></div>
+      </form>
+    </section>}
+
+    <section className="incident-history" aria-labelledby="incident-history-title"><div className="section-heading"><div><span className="eyebrow">Saved records</span><h2 id="incident-history-title">Report history</h2><p>Download an individual PDF when you need a record of an infraction.</p></div></div>{reports.isLoading && <div className="table-skeleton">{Array.from({ length: 4 }, (_, index) => <div className="skeleton skeleton--row" key={index} />)}</div>}{reports.isError && <ErrorState title="Incident reports unavailable" message={reports.error instanceof ApiError ? reports.error.problem.title : 'The report history could not be loaded.'} onRetry={() => reports.refetch()} />}{reports.data && reports.data.length === 0 && <EmptyState title="No incident reports yet" message="Create a report when a residence-life incident occurs." />}{reports.data && reports.data.length > 0 && <div className="incident-list">{reports.data.map((report) => <IncidentRow report={report} onDownload={async () => { try { await downloadPdf(`/api/incidents/${report.id}/pdf`, `incident-${report.occurredAt.slice(0, 10)}.pdf`) } catch (error) { toast(error instanceof ApiError ? error.problem.title : 'The incident PDF could not be downloaded.', 'error') } }} key={report.id} />)}</div>}</section>
+    <div className="privacy-callout"><ShieldCheck size={18} /><p><strong>Handle reports carefully.</strong> Incident records contain restricted residence-life information and are available only to authorized staff.</p></div>
+  </div>
+}
+
+function IncidentRow({ report, onDownload }: { report: IncidentReportSummary; onDownload: () => void }) {
+  return <article className="incident-row"><span className="incident-row__type">{typeLabel(report.incidentType)}</span><div className="incident-row__details"><strong>{report.location}</strong><span>{new Date(report.occurredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} · Reported by {report.reportedByName}</span></div><div className="incident-row__meta"><span><UsersRound size={15} />{report.studentCount} student{report.studentCount === 1 ? '' : 's'}</span><strong>{report.infractionPrice == null ? 'No price' : `$${report.infractionPrice.toFixed(2)}`}</strong></div><button className="button button--quiet" type="button" onClick={onDownload}><Download size={16} />PDF</button></article>
+}

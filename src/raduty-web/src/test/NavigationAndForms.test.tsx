@@ -40,6 +40,7 @@ describe('Role-based navigation and forms', () => {
     expect(within(desktopNav).getByRole('link', { name: 'Schedule' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Room check' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Dorm sweeps' })).toBeInTheDocument()
+    expect(within(desktopNav).getByRole('link', { name: 'Incident reports' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Residents' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Manage' })).toBeInTheDocument()
     expect(within(desktopNav).queryByRole('link', { name: 'People' })).not.toBeInTheDocument()

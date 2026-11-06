@@ -5,18 +5,20 @@ import { HomePage } from '../pages/HomePage'
 import { directorUser, raUser } from './fixtures'
 
 describe('Home page', () => {
-  it('presents schedule, room checks, dorm sweeps, and resident management', () => {
+  it('presents schedule, room checks, incident reporting, and resident management', () => {
     render(<MemoryRouter><HomePage user={raUser} /></MemoryRouter>)
     expect(screen.getByRole('link', { name: /Schedule/ })).toHaveAttribute('href', '/schedule')
     expect(screen.getByRole('link', { name: /Room Check/ })).toHaveAttribute('href', '/dorm-checks')
     expect(screen.getByRole('link', { name: /Dorm sweeps/ })).toHaveAttribute('href', '/dorm-sweeps')
     expect(screen.getByRole('link', { name: /Residents/ })).toHaveAttribute('href', '/residents')
-    expect(screen.getByRole('navigation', { name: 'Dorm tools' }).children).toHaveLength(4)
+    expect(screen.getByRole('link', { name: /Incident report/ })).toHaveAttribute('href', '/incidents')
+    expect(screen.getByRole('navigation', { name: 'Dorm tools' }).children).toHaveLength(5)
   })
 
   it('gives Hall Directors the same direct resident-management entry point', () => {
     render(<MemoryRouter><HomePage user={directorUser} /></MemoryRouter>)
     expect(screen.getByRole('link', { name: /Residents/ })).toHaveAttribute('href', '/residents')
-    expect(screen.getByRole('navigation', { name: 'Dorm tools' }).children).toHaveLength(4)
+    expect(screen.getByRole('link', { name: /Incident report/ })).toHaveAttribute('href', '/incidents')
+    expect(screen.getByRole('navigation', { name: 'Dorm tools' }).children).toHaveLength(5)
   })
 })

@@ -1,6 +1,7 @@
 export type HallRole = 'ResidentAssistant' | 'HallDirector' | 'Admin'
 export type ScheduleStatus = 'Draft' | 'OpenForSelection' | 'Closed' | 'Published' | 'Archived'
 export type ShiftStatus = 'Open' | 'Full' | 'Cancelled'
+export type IncidentType = 'Alcohol' | 'Smoking' | 'SmokeDetectorCovered' | 'Fight' | 'IllegalAppliance' | 'LoudNoise' | 'UnauthorizedRoomMove' | 'Assault' | 'Other'
 
 export interface CurrentUser {
   id: string; schoolEmail: string; firstName: string; lastName: string
@@ -87,5 +88,15 @@ export interface DormRosterImportPreview {
 }
 export interface ManagedDormResident { id: string; firstName: string; lastName: string; dormRoomId: string; roomCode: string; sportOrActivity?: string | null }
 export interface DormRoomOption { id: string; roomCode: string; occupancy: number; capacity: number }
+export interface IncidentReportSummary {
+  id: string; incidentType: IncidentType; occurredAt: string; location: string; reportedByName: string
+  studentCount: number; infractionPrice?: number | null
+}
+export interface IncidentStaff { id: string; name: string }
+export interface IncidentStudent { id: string; firstName: string; lastName: string; studentId: string; roomNumber: string; roomLetter: string }
+export interface IncidentReport extends IncidentReportSummary {
+  description: string; alcoholOunces?: number | null; createdAt: string; reportedByUserId: string
+  staffPresent: IncidentStaff[]; students: IncidentStudent[]
+}
 
 export interface ProblemDetails { status: number; title: string; code: string; traceId?: string }
