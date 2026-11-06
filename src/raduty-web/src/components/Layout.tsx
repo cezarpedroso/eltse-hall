@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { api, setActiveResidenceHall, signOut as endSession } from '../api'
 import type { CurrentUser, ResidenceHall } from '../types'
+import wpuLogo from '../assets/william-penn-university-logo.png'
 
 export function AppLayout({ user, children }: { user: CurrentUser; children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -38,7 +39,7 @@ export function AppLayout({ user, children }: { user: CurrentUser; children: Rea
   return <div className={`app-shell ${location.pathname === '/schedule' ? 'app-shell--calendar' : ''}`}>
     <header className="topbar">
       <button className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation" title="Open navigation"><Menu /></button>
-      <NavLink to="/" className="brand" aria-label={`${user.residenceHallName} home`}><strong>{user.residenceHallName}</strong></NavLink>
+      <NavLink to="/" className="brand" aria-label={`${user.residenceHallName} home`}><img className="brand__logo" src={wpuLogo} alt="William Penn University" /><strong>{user.residenceHallName}</strong></NavLink>
       <nav className="desktop-nav" aria-label="Primary navigation">
         {links.map(({ to, label, end }) => <NavLink to={to} end={end} key={to}>{label}</NavLink>)}
       </nav>
@@ -47,7 +48,7 @@ export function AppLayout({ user, children }: { user: CurrentUser; children: Rea
       <NavLink to="/profile" className="mobile-account" aria-label="Open my profile">{initials(user)}</NavLink>
     </header>
     <aside className={`mobile-drawer ${mobileOpen ? 'is-open' : ''}`} aria-hidden={!mobileOpen} inert={mobileOpen ? undefined : true}>
-      <div className="mobile-drawer__head"><span className="brand"><strong>{user.residenceHallName}</strong></span><button className="icon-button" onClick={close} aria-label="Close navigation"><X /></button></div>
+      <div className="mobile-drawer__head"><span className="brand"><img className="brand__logo" src={wpuLogo} alt="William Penn University" /><strong>{user.residenceHallName}</strong></span><button className="icon-button" onClick={close} aria-label="Close navigation"><X /></button></div>
       {isCampusAdministrator && <label className="hall-switcher hall-switcher--mobile"><span>Working in</span><select aria-label="Active residence hall" value={user.residenceHallId} onChange={(event) => changeHall(event.target.value)}>{halls.filter((hall) => hall.isActive).map((hall) => <option value={hall.id} key={hall.id}>{hall.name}</option>)}</select></label>}
       <nav aria-label="Mobile navigation">{links.map(({ to, label, icon: Icon, end }) => <NavLink to={to} end={end} key={to} onClick={close}><Icon size={19} />{label}</NavLink>)}</nav>
       <button className="drawer-signout" onClick={signOut}><LogOut size={18} />Sign out</button>
