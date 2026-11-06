@@ -49,7 +49,7 @@ h3 { font-size: .95rem; }
 .topbar { height: 72px; padding: 0 clamp(20px, 4vw, 64px); display: flex; align-items: center; gap: clamp(18px, 3vw, 42px); background: rgba(255,255,255,.97); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30; }
 .brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; color: var(--ink); white-space: nowrap; }
 .brand__mark { width: 34px; height: 34px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--primary); color: #fff; font-family: 'Source Serif 4', serif; font-size: .78rem; font-weight: 600; letter-spacing: -.03em; }
-.brand__logo { width: 54px; height: 32px; flex: 0 0 auto; object-fit: contain; object-position: left center; }
+.brand__logo { width: 52px; height: 40px; flex: 0 0 auto; object-fit: contain; object-position: center; }
 .brand > span:last-child { display: grid; line-height: 1.15; }
 .brand strong { font-family: 'Source Serif 4', serif; font-size: 1.08rem; }
 .brand small { color: var(--muted); font-size: .68rem; margin-top: 3px; }
@@ -618,9 +618,9 @@ td a:hover { color: var(--primary); text-decoration: underline; }
   .topbar { height: 60px; padding: 0 14px; gap: 10px; }
   .mobile-menu { width: 42px; height: 42px; padding: 0; place-items: center; border-radius: 12px; cursor: pointer; }
   .mobile-menu:active { background: #eef1ee; }
-  .topbar .brand { gap: 8px; }
+.topbar .brand { gap: 12px; margin-right: 0; }
   .topbar .brand__mark { width: 32px; height: 32px; }
-  .topbar .brand__logo { width: 46px; height: 28px; }
+.topbar .brand__logo { width: 44px; height: 34px; }
   .topbar .brand strong { font-size: 1rem; }
   .topbar .brand small { display: none; }
   .mobile-account { width: 36px; height: 36px; margin-left: auto; place-items: center; border-radius: 50%; background: var(--primary-soft); color: var(--primary-dark); font-size: .72rem; font-weight: 800; text-decoration: none; }
@@ -687,6 +687,7 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 }
 
 .topbar { height: 64px; padding-inline: clamp(16px, 4vw, 48px); gap: 14px; background: rgba(255,255,255,.94); backdrop-filter: blur(14px); }
+.topbar .brand { gap: 16px; margin-right: clamp(14px, 2vw, 30px); }
 .topbar .brand__mark { border-radius: 10px; font-family: 'DM Sans', 'Segoe UI', sans-serif; }
 .account-chip { color: var(--ink); text-decoration: none; }
 .app-footer, .mobile-bottom-nav { display: none !important; }
@@ -802,6 +803,8 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 
 @media (max-width: 760px) {
   .topbar { height: 58px; padding-inline: 12px; }
+  .topbar .brand { gap: 12px; margin-right: 0; }
+  .topbar .brand__logo { width: 44px; height: 34px; }
   .topbar .brand small { display: none; }
   .home-page { min-height: calc(100dvh - 58px); padding: 38px 16px 48px; justify-content: flex-start; }
   .home-intro { margin: 28px 4px 26px; }
