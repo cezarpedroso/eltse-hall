@@ -95,6 +95,30 @@ public sealed class DormResidentManagementService(RaDutyDbContext db, ICurrentUs
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<ClearDormResidentsResult> ClearAsync(CancellationToken cancellationToken)
+    {
+        var current = await currentUserService.GetAsync(cancellationToken);
+        if (current.Role is not (HallRole.HallDirector or HallRole.Admin or HallRole.DeanOfStudents or HallRole.AssistantDirectorOfResidenceLife))
+            throw new AppException(403, "RESIDENT_ROSTER_CLEAR_NOT_ALLOWED", "Only hall and campus leadership can clear a resident roster.");
+
+        var residents = await db.DormResidents.Include(resident => resident.DormRoom)
+            .Where(resident => resident.DormRoom.ResidenceHallId == current.ResidenceHallId)
+            .ToListAsync(cancellationToken);
+        if (residents.Count == 0) return new ClearDormResidentsResult(0);
+
+        db.DormResidents.RemoveRange(residents);
+        db.AuditLogs.Add(new AuditLog
+        {
+            ActorUserId = current.Id,
+            Action = "DORM_RESIDENT_ROSTER_CLEARED",
+            EntityType = "ResidenceHall",
+            EntityId = current.ResidenceHallId.ToString(),
+            OldValuesJson = JsonSerializer.Serialize(new { Hall = current.ResidenceHallName, DeletedResidents = residents.Count })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        return new ClearDormResidentsResult(residents.Count);
+    }
+
     private async Task<DormRoom> GetRoomAsync(Guid roomId, Guid hallId, CancellationToken cancellationToken) =>
         await db.DormRooms.Include(room => room.Residents)
             .SingleOrDefaultAsync(room => room.Id == roomId && room.ResidenceHallId == hallId, cancellationToken)

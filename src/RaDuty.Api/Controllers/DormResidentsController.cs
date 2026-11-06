@@ -32,4 +32,8 @@ public sealed class DormResidentsController(IDormResidentManagementService resid
         await residents.RemoveAsync(residentId, cancellationToken);
         return NoContent();
     }
+
+    [HttpDelete]
+    public Task<ClearDormResidentsResult> Clear(CancellationToken cancellationToken) =>
+        residents.ClearAsync(cancellationToken);
 }

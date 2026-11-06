@@ -22,7 +22,9 @@ describe('Resident management', () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((input: string, init?: RequestInit) => {
       const url = String(input)
       if (init?.method === 'PUT') return Promise.resolve(new Response(JSON.stringify({ ...resident, dormRoomId: 'room-b', roomCode: 'ELTS-01B' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-      if (init?.method === 'DELETE') return Promise.resolve(new Response(null, { status: 204 }))
+      if (init?.method === 'DELETE') return Promise.resolve(url.endsWith('/api/residents')
+        ? new Response(JSON.stringify({ deletedResidents: 1 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        : new Response(null, { status: 204 }))
       const body = url.endsWith('/api/residents/rooms') ? rooms : [resident]
       return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     }))
@@ -55,5 +57,22 @@ describe('Resident management', () => {
     renderPage(directorUser)
     await screen.findByText('Residents')
     expect(screen.queryByRole('link', { name: 'Import Excel' })).not.toBeInTheDocument()
+  })
+
+  it('requires an authorized leader to confirm before clearing the active hall roster', async () => {
+    renderPage(directorUser)
+    await screen.findByText('Alex Rivera')
+    fireEvent.click(screen.getByRole('button', { name: 'Clear residents' }))
+    expect(screen.getByRole('dialog', { name: 'Clear Eltse Hall residents?' })).toBeInTheDocument()
+    expect(screen.getByText(/remove all 1 resident from Eltse Hall/i)).toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringMatching(/\/api\/residents$/), expect.objectContaining({ method: 'DELETE' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, clear Eltse Hall' }))
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/residents$/), expect.objectContaining({ method: 'DELETE' })))
+  })
+
+  it('does not show the clear-roster action to an RA', async () => {
+    renderPage()
+    await screen.findByText('Residents')
+    expect(screen.queryByRole('button', { name: 'Clear residents' })).not.toBeInTheDocument()
   })
 })

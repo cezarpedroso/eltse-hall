@@ -71,6 +71,56 @@ public sealed class DormResidentManagementTests
         Assert.Equal("DORM_ROOM_AT_CAPACITY", error.Code);
     }
 
+    [Theory]
+    [InlineData(HallRole.HallDirector)]
+    [InlineData(HallRole.Admin)]
+    [InlineData(HallRole.DeanOfStudents)]
+    [InlineData(HallRole.AssistantDirectorOfResidenceLife)]
+    public async Task Hall_and_campus_leaders_can_clear_only_the_active_hall_roster(HallRole role)
+    {
+        await using var db = new RaDutyDbContext(new DbContextOptionsBuilder<RaDutyDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var activeHall = new ResidenceHall { Name = "Eltse Hall" };
+        var otherHall = new ResidenceHall { Name = "Market Hall" };
+        var actor = new User { SchoolEmail = "leader@example.edu", FirstName = "Taylor", LastName = "Morgan", Role = role };
+        var activeRoom = new DormRoom { ResidenceHall = activeHall, SuiteNumber = "01", RoomLetter = "A" };
+        var otherRoom = new DormRoom { ResidenceHall = otherHall, SuiteNumber = "01", RoomLetter = "A" };
+        db.AddRange(activeHall, otherHall, actor, activeRoom, otherRoom,
+            new DormResident { DormRoom = activeRoom, FirstName = "Alex", LastName = "Rivera" },
+            new DormResident { DormRoom = otherRoom, FirstName = "Sam", LastName = "Lee" });
+        await db.SaveChangesAsync();
+        var current = new CurrentUserDto(actor.Id, actor.SchoolEmail, actor.FirstName, actor.LastName,
+            null, null, role, true, activeHall.Id, activeHall.Name);
+
+        var result = await new DormResidentManagementService(db, new StubCurrentUserService(current)).ClearAsync(CancellationToken.None);
+
+        Assert.Equal(1, result.DeletedResidents);
+        var remaining = await db.DormResidents.Include(resident => resident.DormRoom).SingleAsync();
+        Assert.Equal(otherHall.Id, remaining.DormRoom.ResidenceHallId);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), audit => audit.Action == "DORM_RESIDENT_ROSTER_CLEARED" && audit.ActorUserId == actor.Id);
+    }
+
+    [Fact]
+    public async Task Resident_assistant_cannot_clear_the_hall_roster()
+    {
+        await using var db = new RaDutyDbContext(new DbContextOptionsBuilder<RaDutyDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var hall = new ResidenceHall { Name = "Eltse Hall" };
+        var ra = new User { SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee", Role = HallRole.ResidentAssistant };
+        var room = new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "A" };
+        db.AddRange(hall, ra, room, new DormResident { DormRoom = room, FirstName = "Alex", LastName = "Rivera" });
+        await db.SaveChangesAsync();
+        var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
+            null, null, ra.Role, true, hall.Id, hall.Name);
+
+        var error = await Assert.ThrowsAsync<AppException>(() => new DormResidentManagementService(db,
+            new StubCurrentUserService(current)).ClearAsync(CancellationToken.None));
+
+        Assert.Equal(403, error.StatusCode);
+        Assert.Equal("RESIDENT_ROSTER_CLEAR_NOT_ALLOWED", error.Code);
+        Assert.Single(await db.DormResidents.ToListAsync());
+    }
+
     private sealed class StubCurrentUserService(CurrentUserDto current) : ICurrentUserService
     {
         public Task<CurrentUserDto> GetAsync(CancellationToken cancellationToken) => Task.FromResult(current);
