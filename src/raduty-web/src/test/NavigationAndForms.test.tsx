@@ -37,6 +37,8 @@ describe('Role-based navigation and forms', () => {
   it('shows the full desktop navigation for administrators', () => {
     render(<MemoryRouter><AppLayout user={adminUser}><div>content</div></AppLayout></MemoryRouter>)
     const desktopNav = screen.getByRole('navigation', { name: 'Primary navigation' })
+    expect(screen.getAllByAltText('William Penn athletics')).toHaveLength(2)
+    expect(screen.getAllByAltText('William Penn athletics')[0]).toHaveAttribute('src', expect.stringContaining('wpu-athletics-logo'))
     expect(within(desktopNav).getByRole('link', { name: 'Schedule' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Room check' })).toBeInTheDocument()
     expect(within(desktopNav).getByRole('link', { name: 'Dorm sweeps' })).toBeInTheDocument()
