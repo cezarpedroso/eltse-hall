@@ -364,7 +364,9 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .signin-brand > span:last-child { display: grid; }
 .signin-brand strong { font-family: 'Source Serif 4', serif; font-size: 1.1rem; }
 .signin-brand small { color: var(--muted); font-size: .68rem; }
-.signin-university-logo { width: min(280px, 72%); height: auto; margin: 28px 0 0; object-fit: contain; object-position: left center; }
+.signin-logo-lockup { display: grid; justify-items: start; gap: 10px; }
+.signin-university-logo { width: min(280px, 72%); height: auto; object-fit: contain; object-position: left center; }
+.signin-portal-name { color: var(--primary); font-size: .78rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .signin-copy { max-width: 520px; margin: auto 0 42px; }
 .signin-copy h1 { font-size: clamp(2.6rem, 5vw, 4rem); max-width: 500px; }
 .signin-copy p { max-width: 470px; color: var(--muted); font-size: .98rem; line-height: 1.7; }
