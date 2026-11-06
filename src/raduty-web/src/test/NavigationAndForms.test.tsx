@@ -20,10 +20,10 @@ describe('Role-based navigation and forms', () => {
     expect(password).toHaveAttribute('type', 'password')
   })
 
-  it('hides Hall Director navigation from resident assistants', () => {
+  it('shows operational management to resident assistants', () => {
     render(<MemoryRouter><AppLayout user={raUser}><div>content</div></AppLayout></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }))
-    expect(screen.queryByRole('link', { name: 'Manage' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Mobile navigation' })).getByRole('link', { name: 'Manage' })).toBeInTheDocument()
   })
 
   it('shows Hall Director navigation to directors', () => {

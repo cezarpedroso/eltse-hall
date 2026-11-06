@@ -1,4 +1,4 @@
-export type HallRole = 'ResidentAssistant' | 'HallDirector' | 'Admin'
+export type HallRole = 'ResidentAssistant' | 'HallDirector' | 'AssistantDirectorOfResidenceLife' | 'DeanOfStudents' | 'Admin'
 export type ScheduleStatus = 'Draft' | 'OpenForSelection' | 'Closed' | 'Published' | 'Archived'
 export type ShiftStatus = 'Open' | 'Full' | 'Cancelled'
 export type IncidentType = 'Alcohol' | 'Smoking' | 'SmokeDetectorCovered' | 'Fight' | 'IllegalAppliance' | 'LoudNoise' | 'UnauthorizedRoomMove' | 'Assault' | 'Other'
@@ -37,11 +37,12 @@ export interface ScheduleSummary {
 
 export interface ResidentAssistant {
   id: string; firstName: string; lastName: string; schoolEmail: string; roomNumber?: string
-  phoneNumber?: string; role: HallRole; isActive: boolean; shiftCount: number
+  phoneNumber?: string; role: HallRole; isActive: boolean; shiftCount: number; residenceHallId?: string; residenceHallName?: string
 }
 
 export interface ProvisionedAccount { user: ResidentAssistant; temporaryPassword: string }
 export interface TemporaryPassword { temporaryPassword: string }
+export interface ResidenceHall { id: string; name: string; code: string; timeZone: string; isActive: boolean; staffCount: number; roomCount: number }
 
 export interface Distribution {
   userId: string; name: string; totalShifts: number; weekendShifts: number; balance: string

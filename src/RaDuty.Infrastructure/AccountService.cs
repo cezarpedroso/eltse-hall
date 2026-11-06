@@ -167,6 +167,9 @@ public sealed class AccountService(
     {
         var actor = await currentUserService.GetAsync(cancellationToken);
         EnsureCanManageRole(actor, request.Role);
+        var residenceHallId = request.ResidenceHallId ?? actor.ResidenceHallId;
+        var hallIsActive = await db.ResidenceHalls.AnyAsync(hall => hall.Id == residenceHallId && hall.IsActive, cancellationToken);
+        if (!hallIsActive) throw new AppException(400, "INVALID_RESIDENCE_HALL", "Choose an active residence hall for this account.");
         var email = ValidateAndNormalizeEmail(request.Email);
         var firstName = ValidateName(request.FirstName, "First name");
         var lastName = ValidateName(request.LastName, "Last name");
@@ -190,7 +193,7 @@ public sealed class AccountService(
             };
             membership = new HallMembership
             {
-                ResidenceHallId = actor.ResidenceHallId,
+                ResidenceHallId = residenceHallId,
                 User = user,
                 HallRole = request.Role
             };
@@ -204,14 +207,14 @@ public sealed class AccountService(
                 user.HallMemberships.Remove(removedMembership);
                 db.Entry(removedMembership).State = EntityState.Detached;
             }
-            membership = user.HallMemberships.SingleOrDefault(x => x.ResidenceHallId == actor.ResidenceHallId);
+            membership = user.HallMemberships.SingleOrDefault(x => x.ResidenceHallId == residenceHallId);
             if (membership is null)
             {
                 if (user.HallMemberships.Any(x => x.IsActive))
                     throw new AppException(409, "EMAIL_ALREADY_EXISTS", "That school email belongs to a person in another hall.");
                 membership = new HallMembership
                 {
-                    ResidenceHallId = actor.ResidenceHallId,
+                    ResidenceHallId = residenceHallId,
                     User = user,
                     HallRole = request.Role
                 };
@@ -254,10 +257,8 @@ public sealed class AccountService(
         var account = await db.Users.Include(x => x.User).ThenInclude(x => x.HallMemberships)
             .SingleOrDefaultAsync(x => x.UserId == userId, cancellationToken)
             ?? throw new AppException(404, "ACCOUNT_NOT_FOUND", "Login account not found.");
-        var membership = account.User.HallMemberships.SingleOrDefault(x => x.ResidenceHallId == actor.ResidenceHallId)
-            ?? throw new AppException(404, "ACCOUNT_NOT_FOUND", "Login account not found in this hall.");
-        if (actor.Role == HallRole.HallDirector && membership.HallRole != HallRole.ResidentAssistant)
-            throw new AppException(403, "PASSWORD_RESET_NOT_ALLOWED", "Hall Directors can reset Resident Assistant passwords only.");
+        var membership = account.User.HallMemberships.SingleOrDefault(x => x.IsActive)
+            ?? throw new AppException(404, "ACCOUNT_NOT_FOUND", "Login account not found.");
         if (actor.Id == userId)
             throw new AppException(400, "USE_CHANGE_PASSWORD", "Use Change password to update your own password.");
 
@@ -346,10 +347,8 @@ public sealed class AccountService(
     private static void EnsureCanManageRole(CurrentUserDto actor, HallRole requestedRole)
     {
         if (!Enum.IsDefined(requestedRole)) throw new AppException(400, "INVALID_ROLE", "Choose a valid hall role.");
-        if (actor.Role == HallRole.HallDirector && requestedRole != HallRole.ResidentAssistant)
-            throw new AppException(403, "ROLE_ASSIGNMENT_NOT_ALLOWED", "Hall Directors can create Resident Assistant accounts only.");
-        if (actor.Role == HallRole.ResidentAssistant)
-            throw new AppException(403, "ACCOUNT_MANAGEMENT_NOT_ALLOWED", "You cannot create login accounts.");
+        if (actor.Role is not (HallRole.Admin or HallRole.DeanOfStudents or HallRole.AssistantDirectorOfResidenceLife))
+            throw new AppException(403, "ACCOUNT_MANAGEMENT_NOT_ALLOWED", "Only campus administrators can manage login accounts.");
     }
 
     private static string GenerateTemporaryPassword()

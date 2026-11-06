@@ -581,6 +581,11 @@ namespace RaDuty.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -595,6 +600,8 @@ namespace RaDuty.Infrastructure.Migrations
                         .HasColumnType("nvarchar(80)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Code");
 
                     b.ToTable("ResidenceHalls");
                 });

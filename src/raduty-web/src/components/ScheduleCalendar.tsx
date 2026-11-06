@@ -36,7 +36,7 @@ function ShiftCell({ shift, onSelect }: { shift: Shift; onSelect: (shift: Shift)
 function ShiftDetailsDialog({ schedule, shift, user, onClose }: { schedule: Schedule; shift: Shift | null; user: CurrentUser; onClose: () => void }) {
   const queryClient = useQueryClient()
   const toast = useToast()
-  const isManager = user.role === 'HallDirector' || user.role === 'Admin'
+  const isManager = user.role === 'HallDirector' || user.role === 'Admin' || user.role === 'DeanOfStudents' || user.role === 'AssistantDirectorOfResidenceLife'
   const [selectedUserId, setSelectedUserId] = useState('')
   const closeDialog = () => { setSelectedUserId(''); onClose() }
   const staff = useQuery({
@@ -77,7 +77,7 @@ function ShiftDetailsDialog({ schedule, shift, user, onClose }: { schedule: Sche
       <label htmlFor="shift-staff-member">Assign staff member</label>
       <div><select id="shift-staff-member" value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)} disabled={staff.isLoading || assignStaff.isPending}>
         <option value="">{staff.isLoading ? 'Loading staff…' : availableStaff.length ? 'Choose a staff member' : 'No available staff'}</option>
-        {availableStaff.map((member) => <option value={member.id} key={member.id}>{member.firstName} {member.lastName}{member.role === 'Admin' ? ' (Admin)' : member.role === 'HallDirector' ? ' (Hall Director)' : ''}</option>)}
+        {availableStaff.map((member) => <option value={member.id} key={member.id}>{member.firstName} {member.lastName}{member.role === 'Admin' ? ' (Admin)' : member.role === 'DeanOfStudents' ? ' (Dean of Students)' : member.role === 'AssistantDirectorOfResidenceLife' ? ' (Assistant Director)' : member.role === 'HallDirector' ? ' (Hall Director)' : ''}</option>)}
       </select><button className="button button--primary" type="button" onClick={() => assignStaff.mutate(selectedUserId)} disabled={!selectedUserId || assignStaff.isPending}>{assignStaff.isPending ? 'Assigning…' : 'Assign shift'}</button></div>
       <small>Directors and admins can assign coverage regardless of normal RA limits or current staffing.</small>
     </section> : <p className="ownership-note">You can only add or remove your own assignment.</p>}

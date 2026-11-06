@@ -4,8 +4,9 @@ using RaDuty.Application;
 
 namespace RaDuty.Api.Controllers;
 
-[ApiController, Route("api/admin"), Authorize(Policy = "HallDirectorOnly")]
-public sealed class AdminController(IScheduleService schedules, IUserService users, IAccountService accounts) : ControllerBase
+[ApiController, Route("api/admin"), Authorize(Policy = "ResidentAssistantOrDirector")]
+public sealed class AdminController(IScheduleService schedules, IUserService users, IAccountService accounts,
+    IResidenceHallManagementService halls) : ControllerBase
 {
     [HttpPost("schedules/{year:int}/{month:int}/generate")]
     public async Task<ActionResult<ScheduleDto>> Generate(int year, int month, GenerateScheduleRequest request, CancellationToken cancellationToken)
@@ -42,11 +43,11 @@ public sealed class AdminController(IScheduleService schedules, IUserService use
     public Task<ShiftDto> UpdateShift(Guid shiftId, UpdateShiftRequest request, CancellationToken cancellationToken) =>
         schedules.UpdateShiftAsync(shiftId, request, cancellationToken);
 
-    [HttpPut("users/{userId:guid}")]
+    [HttpPut("users/{userId:guid}"), Authorize(Policy = "CampusAdministrator")]
     public Task<ResidentAssistantDto> UpdateUser(Guid userId, UpdateUserRequest request, CancellationToken cancellationToken) =>
         users.UpdateUserAsync(userId, request, cancellationToken);
 
-    [HttpDelete("users/{userId:guid}")]
+    [HttpDelete("users/{userId:guid}"), Authorize(Policy = "CampusAdministrator")]
     public async Task<IActionResult> DeleteUser(Guid userId, CancellationToken cancellationToken)
     {
         await users.DeleteUserAsync(userId, cancellationToken);
@@ -57,7 +58,7 @@ public sealed class AdminController(IScheduleService schedules, IUserService use
     public Task<IReadOnlyList<ResidentAssistantDto>> GetUsers([FromQuery] string? search, CancellationToken cancellationToken) =>
         users.GetUsersAsync(search, cancellationToken);
 
-    [HttpPost("users")]
+    [HttpPost("users"), Authorize(Policy = "CampusAdministrator")]
     public async Task<ActionResult<ProvisionedAccountDto>> CreateUser(CreateStaffAccountRequest request,
         CancellationToken cancellationToken)
     {
@@ -65,13 +66,23 @@ public sealed class AdminController(IScheduleService schedules, IUserService use
         return Created($"/api/admin/users/{account.User.Id}", account);
     }
 
-    [HttpPost("users/{userId:guid}/reset-password")]
+    [HttpPost("users/{userId:guid}/reset-password"), Authorize(Policy = "CampusAdministrator")]
     public Task<TemporaryPasswordDto> ResetPassword(Guid userId, CancellationToken cancellationToken) =>
         accounts.ResetPasswordAsync(userId, cancellationToken);
 
-    [HttpGet("audit-logs")]
+    [HttpGet("audit-logs"), Authorize(Policy = "CampusAdministrator")]
     public Task<PagedResult<AuditLogDto>> AuditLogs([FromQuery] string? action, [FromQuery] int page = 1,
         [FromQuery] int pageSize = 25, CancellationToken cancellationToken = default) =>
         schedules.GetAuditLogsAsync(action, page, pageSize, cancellationToken);
+
+    [HttpGet("halls"), Authorize(Policy = "CampusAdministrator")]
+    public Task<IReadOnlyList<ResidenceHallDto>> GetHalls(CancellationToken cancellationToken) => halls.GetAsync(cancellationToken);
+
+    [HttpPost("halls"), Authorize(Policy = "CampusAdministrator")]
+    public async Task<ActionResult<ResidenceHallDto>> CreateHall(CreateResidenceHallRequest request, CancellationToken cancellationToken)
+    {
+        var hall = await halls.CreateAsync(request, cancellationToken);
+        return Created($"/api/admin/halls/{hall.Id}", hall);
+    }
 
 }

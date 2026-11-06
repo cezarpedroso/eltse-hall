@@ -3,6 +3,10 @@ import type { ProblemDetails } from './types'
 const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim()
 const baseUrl = configuredBaseUrl ? configuredBaseUrl.replace(/\/$/, '') : ''
 let csrfRequest: Promise<string> | undefined
+const activeHallStorageKey = 'wpu-res-life.active-hall-id'
+
+function activeHallId() { return sessionStorage.getItem(activeHallStorageKey) }
+export function setActiveResidenceHall(id: string) { sessionStorage.setItem(activeHallStorageKey, id) }
 
 export class ApiError extends Error {
   readonly problem: ProblemDetails
@@ -32,6 +36,8 @@ export function resetCsrfToken() { csrfRequest = undefined }
 
 async function request(path: string, init: RequestInit, signal?: AbortSignal, allowCsrfRetry = true): Promise<Response> {
   const headers = new Headers(init.headers)
+  const hallId = activeHallId()
+  if (hallId) headers.set('X-Active-Residence-Hall', hallId)
   if (init.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (isUnsafe(init.method)) headers.set('X-CSRF-TOKEN', await csrfToken())
   const response = await fetch(`${baseUrl}${path}`, { ...init, headers, signal, credentials: 'include', cache: isUnsafe(init.method) ? init.cache : 'no-store' })
@@ -76,7 +82,10 @@ export async function signOut(): Promise<void> {
 }
 
 export async function downloadPdf(path: string, filename: string): Promise<void> {
-  const response = await fetch(`${baseUrl}${path}`, { credentials: 'include', cache: 'no-store' })
+  const headers = new Headers()
+  const hallId = activeHallId()
+  if (hallId) headers.set('X-Active-Residence-Hall', hallId)
+  const response = await fetch(`${baseUrl}${path}`, { headers, credentials: 'include', cache: 'no-store' })
   if (!response.ok) {
     let problem: ProblemDetails
     try { problem = await response.json() as ProblemDetails }

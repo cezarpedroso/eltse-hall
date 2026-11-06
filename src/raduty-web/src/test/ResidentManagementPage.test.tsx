@@ -29,12 +29,12 @@ describe('Resident management', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
-  it('lets an RA move a resident to another Eltse room', async () => {
+  it('lets an RA move a resident to another room in their hall', async () => {
     renderPage()
     expect(await screen.findByText('Alex Rivera')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Import Excel' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Edit or move' }))
-    fireEvent.change(screen.getByLabelText(/Eltse room/), { target: { value: 'room-b' } })
+    fireEvent.change(screen.getByLabelText(/Eltse Hall room/), { target: { value: 'room-b' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/residents/resident-1'), expect.objectContaining({ method: 'PUT', body: expect.stringContaining('room-b') })))
@@ -47,12 +47,13 @@ describe('Resident management', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Move to another dorm' }))
     expect(screen.getByRole('dialog', { name: 'Move Alex to another dorm?' })).toBeInTheDocument()
     expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/api/residents/resident-1'), expect.objectContaining({ method: 'DELETE' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Yes, remove from Eltse' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, remove from Eltse Hall' }))
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/residents/resident-1'), expect.objectContaining({ method: 'DELETE' })))
   })
 
-  it('shows bulk Excel import to a Hall Director', async () => {
+  it('does not expose campus roster import to a Hall Director', async () => {
     renderPage(directorUser)
-    expect(await screen.findByRole('link', { name: 'Import Excel' })).toHaveAttribute('href', '/admin/residents')
+    await screen.findByText('Residents')
+    expect(screen.queryByRole('link', { name: 'Import Excel' })).not.toBeInTheDocument()
   })
 })

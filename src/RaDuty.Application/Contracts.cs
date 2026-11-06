@@ -18,7 +18,7 @@ public sealed record LoginResult(bool MustChangePassword);
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public sealed record BootstrapAdminRequest(string Email, string FirstName, string LastName, string Password);
 public sealed record CreateStaffAccountRequest(string Email, string FirstName, string LastName, HallRole Role,
-    string? RoomNumber, string? PhoneNumber);
+    string? RoomNumber, string? PhoneNumber, Guid? ResidenceHallId = null);
 public sealed record ProvisionedAccountDto(ResidentAssistantDto User, string TemporaryPassword);
 public sealed record TemporaryPasswordDto(string TemporaryPassword);
 public sealed record AuthenticatedAccountDto(Guid UserId, string SchoolEmail, string FirstName, string LastName,
@@ -44,7 +44,8 @@ public sealed record ScheduleSummaryDto(int TotalShifts, int OpenShifts, int Unf
     int MyWeekendShiftCount, IReadOnlyList<ShiftDto> MyUpcomingShifts);
 
 public sealed record ResidentAssistantDto(Guid Id, string FirstName, string LastName, string SchoolEmail,
-    string? RoomNumber, string? PhoneNumber, HallRole Role, bool IsActive, int ShiftCount = 0);
+    string? RoomNumber, string? PhoneNumber, HallRole Role, bool IsActive, int ShiftCount = 0,
+    Guid? ResidenceHallId = null, string? ResidenceHallName = null);
 
 public sealed record DistributionDto(Guid UserId, string Name, int TotalShifts, int WeekendShifts, string Balance);
 
@@ -63,7 +64,8 @@ public sealed record UpdateScheduleRequest(int RequiredStaffPerShift, int Maximu
 
 public sealed record AdminAssignmentRequest(Guid UserId, string? Notes, bool OverrideRules = false);
 public sealed record UpdateShiftRequest(int RequiredStaffCount, ShiftStatus Status, byte[] RowVersion);
-public sealed record UpdateUserRequest(string? RoomNumber, string? PhoneNumber, HallRole Role, bool IsActive);
+public sealed record UpdateUserRequest(string? RoomNumber, string? PhoneNumber, HallRole Role, bool IsActive,
+    Guid? ResidenceHallId = null);
 
 public sealed record DormResidentDto(Guid Id, string FirstName, string LastName);
 public sealed record DormRoomCheckSummaryDto(Guid Id, Guid CheckedByUserId, string CheckedByName, DateTimeOffset CheckedAt, int PhotoCount = 0);
@@ -118,6 +120,8 @@ public sealed record ManagedDormResidentDto(Guid Id, string FirstName, string La
     string RoomCode, string? SportOrActivity);
 public sealed record DormRoomOptionDto(Guid Id, string RoomCode, int Occupancy, int Capacity = 2);
 public sealed record SaveDormResidentRequest(string FirstName, string LastName, Guid DormRoomId, string? SportOrActivity);
+public sealed record ResidenceHallDto(Guid Id, string Name, string Code, string TimeZone, bool IsActive, int StaffCount, int RoomCount);
+public sealed record CreateResidenceHallRequest(string Name, string Code, string? TimeZone = null);
 public sealed record IncidentStaffDto(Guid Id, string Name);
 public sealed record IncidentStudentDto(Guid Id, string FirstName, string LastName, string StudentId, string RoomNumber, string RoomLetter);
 public sealed record IncidentReportSummaryDto(Guid Id, IncidentType IncidentType, DateTimeOffset OccurredAt,
@@ -243,6 +247,12 @@ public interface IIncidentReportService
 public interface IIncidentReportPdfService
 {
     byte[] Render(IncidentReportDto report, string residenceHallName, DateTimeOffset generatedAt);
+}
+
+public interface IResidenceHallManagementService
+{
+    Task<IReadOnlyList<ResidenceHallDto>> GetAsync(CancellationToken cancellationToken);
+    Task<ResidenceHallDto> CreateAsync(CreateResidenceHallRequest request, CancellationToken cancellationToken);
 }
 
 public sealed class AppException(int statusCode, string code, string message) : Exception(message)

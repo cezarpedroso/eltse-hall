@@ -52,6 +52,8 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
         modelBuilder.Entity<ResidenceHall>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(160);
+            entity.Property(x => x.Code).HasMaxLength(12);
+            entity.HasIndex(x => x.Code);
             entity.Property(x => x.TimeZone).HasMaxLength(80);
         });
 
