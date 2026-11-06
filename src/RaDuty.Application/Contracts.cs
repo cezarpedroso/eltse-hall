@@ -118,6 +118,18 @@ public sealed record ManagedDormResidentDto(Guid Id, string FirstName, string La
     string RoomCode, string? SportOrActivity);
 public sealed record DormRoomOptionDto(Guid Id, string RoomCode, int Occupancy, int Capacity = 2);
 public sealed record SaveDormResidentRequest(string FirstName, string LastName, Guid DormRoomId, string? SportOrActivity);
+public sealed record IncidentStaffDto(Guid Id, string Name);
+public sealed record IncidentStudentDto(Guid Id, string FirstName, string LastName, string StudentId, string RoomNumber, string RoomLetter);
+public sealed record IncidentReportSummaryDto(Guid Id, IncidentType IncidentType, DateTimeOffset OccurredAt,
+    string Location, string ReportedByName, int StudentCount, decimal? InfractionPrice);
+public sealed record IncidentReportDto(Guid Id, IncidentType IncidentType, DateTimeOffset OccurredAt,
+    string Location, string Description, decimal? AlcoholOunces, decimal? InfractionPrice, DateTimeOffset CreatedAt,
+    Guid ReportedByUserId, string ReportedByName, IReadOnlyList<IncidentStaffDto> StaffPresent,
+    IReadOnlyList<IncidentStudentDto> Students);
+public sealed record SaveIncidentStudentRequest(string FirstName, string LastName, string StudentId, string RoomNumber, string RoomLetter);
+public sealed record CreateIncidentReportRequest(IncidentType IncidentType, DateTimeOffset OccurredAt, string Location,
+    string Description, decimal? AlcoholOunces, decimal? InfractionPrice, IReadOnlyList<Guid>? StaffPresentUserIds,
+    IReadOnlyList<SaveIncidentStudentRequest> Students);
 
 public interface ICurrentUserService
 {
@@ -219,6 +231,18 @@ public interface IDormResidentManagementService
     Task<ManagedDormResidentDto> CreateAsync(SaveDormResidentRequest request, CancellationToken cancellationToken);
     Task<ManagedDormResidentDto> UpdateAsync(Guid residentId, SaveDormResidentRequest request, CancellationToken cancellationToken);
     Task RemoveAsync(Guid residentId, CancellationToken cancellationToken);
+}
+
+public interface IIncidentReportService
+{
+    Task<IReadOnlyList<IncidentReportSummaryDto>> GetAllAsync(CancellationToken cancellationToken);
+    Task<IncidentReportDto> GetAsync(Guid incidentId, CancellationToken cancellationToken);
+    Task<IncidentReportDto> CreateAsync(CreateIncidentReportRequest request, CancellationToken cancellationToken);
+}
+
+public interface IIncidentReportPdfService
+{
+    byte[] Render(IncidentReportDto report, string residenceHallName, DateTimeOffset generatedAt);
 }
 
 public sealed class AppException(int statusCode, string code, string message) : Exception(message)

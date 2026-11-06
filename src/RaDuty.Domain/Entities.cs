@@ -28,6 +28,7 @@ public sealed class ResidenceHall : Entity
     public ICollection<SchedulePeriod> SchedulePeriods { get; set; } = [];
     public ICollection<DormRoom> DormRooms { get; set; } = [];
     public ICollection<DormSuiteSweep> DormSuiteSweeps { get; set; } = [];
+    public ICollection<IncidentReport> IncidentReports { get; set; } = [];
 }
 
 public sealed class HallMembership : Entity
@@ -188,6 +189,42 @@ public sealed class DormSweepPhoto : Entity
     public required string ContentType { get; set; }
     public long SizeBytes { get; set; }
     public DateTimeOffset UploadedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class IncidentReport : Entity
+{
+    public Guid ResidenceHallId { get; set; }
+    public ResidenceHall ResidenceHall { get; set; } = null!;
+    public Guid ReportedByUserId { get; set; }
+    public User ReportedByUser { get; set; } = null!;
+    public IncidentType IncidentType { get; set; }
+    public DateTimeOffset OccurredAt { get; set; }
+    public required string Location { get; set; }
+    public required string Description { get; set; }
+    public decimal? AlcoholOunces { get; set; }
+    public decimal? InfractionPrice { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<IncidentStaffMember> StaffPresent { get; set; } = [];
+    public ICollection<IncidentStudent> Students { get; set; } = [];
+}
+
+public sealed class IncidentStaffMember : Entity
+{
+    public Guid IncidentReportId { get; set; }
+    public IncidentReport IncidentReport { get; set; } = null!;
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+}
+
+public sealed class IncidentStudent : Entity
+{
+    public Guid IncidentReportId { get; set; }
+    public IncidentReport IncidentReport { get; set; } = null!;
+    public required string FirstName { get; set; }
+    public required string LastName { get; set; }
+    public required string StudentId { get; set; }
+    public required string RoomNumber { get; set; }
+    public required string RoomLetter { get; set; }
 }
 
 public sealed class DomainRuleException(string code, string message) : Exception(message)

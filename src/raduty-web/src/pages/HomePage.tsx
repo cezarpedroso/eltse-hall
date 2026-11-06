@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, ClipboardCheck, ClipboardList, UsersRound } from 'lucide-react'
+import { ArrowRight, CalendarDays, ClipboardCheck, ClipboardList, FileText, UsersRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { CurrentUser } from '../types'
 
@@ -32,6 +32,12 @@ export function HomePage({ user }: { user: CurrentUser }) {
       <Link className="home-action" to="/residents">
         <span className="home-action__icon"><UsersRound /></span>
         <span className="home-action__copy"><strong>Residents</strong><small>Add, edit, or move residents</small></span>
+        <ArrowRight className="home-action__arrow" />
+      </Link>
+
+      <Link className="home-action" to="/incidents">
+        <span className="home-action__icon"><FileText /></span>
+        <span className="home-action__copy"><strong>Incident report</strong><small>Document a residence-life incident</small></span>
         <ArrowRight className="home-action__arrow" />
       </Link>
     </nav>
