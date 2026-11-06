@@ -30,7 +30,7 @@ public sealed class DormSweepPhotoService : IDormSweepPhotoService
         var sweep = await db.DormSuiteSweeps.Include(x => x.Photos)
             .SingleOrDefaultAsync(x => x.Id == sweepId && x.ResidenceHallId == current.ResidenceHallId, cancellationToken)
             ?? throw new AppException(404, "DORM_SWEEP_NOT_FOUND", "Dorm sweep not found in your hall.");
-        if (current.Role is not HallRole.HallDirector and not HallRole.Admin && sweep.CheckedByUserId != current.Id)
+        if (current.Role is not HallRole.HallDirector and not HallRole.Admin and not HallRole.DeanOfStudents and not HallRole.AssistantDirectorOfResidenceLife && sweep.CheckedByUserId != current.Id)
             throw new AppException(403, "PHOTO_UPLOAD_NOT_ALLOWED", "Only the RA who completed this sweep can add pictures.");
         if (sweep.Photos.Count + photos.Count > MaximumPhotosPerSweep)
             throw new AppException(400, "TOO_MANY_PHOTOS", $"A dorm sweep can have up to {MaximumPhotosPerSweep} pictures.");

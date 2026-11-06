@@ -40,12 +40,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("ResidentAssistantOrDirector", policy =>
     {
         RequireResidenceLifeAccess(policy);
-        policy.RequireRole("ResidentAssistant", "RA", "HallDirector", "Admin");
+        policy.RequireRole("ResidentAssistant", "RA", "HallDirector", "AssistantDirectorOfResidenceLife", "DeanOfStudents", "Admin");
     });
-    options.AddPolicy("HallDirectorOnly", policy =>
+    options.AddPolicy("CampusAdministrator", policy =>
     {
         RequireResidenceLifeAccess(policy);
-        policy.RequireRole("HallDirector", "Admin");
+        policy.RequireRole("AssistantDirectorOfResidenceLife", "DeanOfStudents", "Admin");
     });
     options.FallbackPolicy = options.GetPolicy("AuthorizedResidenceLifeUser");
 });
@@ -147,7 +147,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/health").AllowAnonymous();
-app.MapOpenApi("/openapi/{documentName}.json").RequireAuthorization("HallDirectorOnly");
+app.MapOpenApi("/openapi/{documentName}.json").RequireAuthorization("CampusAdministrator");
 app.MapControllers();
 app.MapFallbackToFile("index.html").AllowAnonymous();
 

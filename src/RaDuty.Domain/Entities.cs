@@ -22,6 +22,7 @@ public sealed class User : Entity
 public sealed class ResidenceHall : Entity
 {
     public required string Name { get; set; }
+    public string Code { get; set; } = "HALL";
     public string TimeZone { get; set; } = "America/Chicago";
     public bool IsActive { get; set; } = true;
     public ICollection<HallMembership> Memberships { get; set; } = [];

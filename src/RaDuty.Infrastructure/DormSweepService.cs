@@ -8,7 +8,6 @@ namespace RaDuty.Infrastructure;
 
 public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService currentUserService, IConfiguration? configuration = null) : IDormSweepService
 {
-    private const int SuiteCount = 25;
     private readonly string photoStorageRoot = ResolvePhotoStorageRoot(configuration);
 
     public async Task<IReadOnlyList<DormSweepSuiteDto>> GetSuitesAsync(CancellationToken cancellationToken)
@@ -16,8 +15,8 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
         var current = await currentUserService.GetAsync(cancellationToken);
         var latestBySuite = await LoadLatestSweepsAsync(current.ResidenceHallId, cancellationToken);
 
-        return Enumerable.Range(1, SuiteCount)
-            .Select(number => number.ToString("00"))
+        var suiteNumbers = await GetSuiteNumbersAsync(current.ResidenceHallId, current.ResidenceHallName, cancellationToken);
+        return suiteNumbers
             .Select(suiteNumber => new DormSweepSuiteDto(suiteNumber,
                 latestBySuite.TryGetValue(suiteNumber, out var sweep) ? ToSummaryDto(sweep) : null,
                 sweep is null ? null : ToDto(sweep)))
@@ -39,8 +38,10 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
                 .Select(resident => new DormSweepResidentDto(resident.Id, resident.FirstName, resident.LastName, RoomCode(room))))
                 .ToList());
 
-        var suites = Enumerable.Range(1, SuiteCount)
-            .Select(number => number.ToString("00"))
+        var suiteNumbers = current.ResidenceHallName == "Eltse Hall"
+            ? Enumerable.Range(1, 25).Select(number => number.ToString("00")).ToList()
+            : residents.Select(x => x.SuiteNumber).Concat(latestBySuite.Keys).Distinct().OrderBy(x => x).ToList();
+        var suites = suiteNumbers
             .Select(suiteNumber => new DormSweepSuiteReportDto(suiteNumber,
                 residentsBySuite.TryGetValue(suiteNumber, out var suiteResidents) ? suiteResidents : [],
                 latestBySuite.TryGetValue(suiteNumber, out var sweep) ? ToDto(sweep) : null,
@@ -54,6 +55,8 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
     {
         var current = await currentUserService.GetAsync(cancellationToken);
         var normalizedSuiteNumber = NormalizeSuiteNumber(suiteNumber);
+        if (current.ResidenceHallName != "Eltse Hall" && !await db.DormRooms.AnyAsync(room => room.ResidenceHallId == current.ResidenceHallId && room.SuiteNumber == normalizedSuiteNumber, cancellationToken))
+            throw new AppException(400, "INVALID_SUITE_NUMBER", "Choose a configured suite in your assigned hall.");
         var notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
         if (notes?.Length > 2000) throw new AppException(400, "NOTES_TOO_LONG", "Notes must be 2,000 characters or fewer.");
 
@@ -124,11 +127,10 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
     private static string NormalizeSuiteNumber(string suiteNumber)
     {
         var cleaned = suiteNumber.Trim().ToUpperInvariant()
-            .Replace("ELTS", "", StringComparison.Ordinal)
             .Replace("-", "", StringComparison.Ordinal);
-        if (!int.TryParse(cleaned, out var number) || number < 1 || number > SuiteCount)
+        if (!int.TryParse(cleaned, out var number) || number < 1 || number > 99)
         {
-            throw new AppException(400, "INVALID_SUITE_NUMBER", "Use a suite number from 01 through 25.");
+            throw new AppException(400, "INVALID_SUITE_NUMBER", "Use a valid suite number.");
         }
 
         return number.ToString("00");
@@ -160,6 +162,13 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
             .OrderByDescending(x => x.CheckedAt)
             .ToListAsync(cancellationToken);
         return sweeps.GroupBy(x => x.SuiteNumber).ToDictionary(x => x.Key, x => x.First());
+    }
+
+    private async Task<IReadOnlyList<string>> GetSuiteNumbersAsync(Guid residenceHallId, string hallName, CancellationToken cancellationToken)
+    {
+        if (hallName == "Eltse Hall") return Enumerable.Range(1, 25).Select(number => number.ToString("00")).ToList();
+        return await db.DormRooms.AsNoTracking().Where(room => room.ResidenceHallId == residenceHallId)
+            .Select(room => room.SuiteNumber).Distinct().OrderBy(number => number).ToListAsync(cancellationToken);
     }
 
     private static string RoomCode(DormRoom room) => $"ELTS-{room.SuiteNumber}{room.RoomLetter}";

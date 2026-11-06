@@ -30,7 +30,7 @@ public sealed class DormCheckPhotoService : IDormCheckPhotoService
         var check = await db.DormRoomChecks.Include(x => x.Photos).Include(x => x.DormRoom)
             .SingleOrDefaultAsync(x => x.Id == checkId && x.DormRoom.ResidenceHallId == current.ResidenceHallId, cancellationToken)
             ?? throw new AppException(404, "DORM_CHECK_NOT_FOUND", "Dorm check not found in your hall.");
-        if (current.Role is not HallRole.HallDirector and not HallRole.Admin && check.CheckedByUserId != current.Id)
+        if (current.Role is not HallRole.HallDirector and not HallRole.Admin and not HallRole.DeanOfStudents and not HallRole.AssistantDirectorOfResidenceLife && check.CheckedByUserId != current.Id)
             throw new AppException(403, "PHOTO_UPLOAD_NOT_ALLOWED", "Only the RA who completed this check can add pictures.");
         if (check.Photos.Count + photos.Count > MaximumPhotosPerCheck)
             throw new AppException(400, "TOO_MANY_PHOTOS", $"A room check can have up to {MaximumPhotosPerCheck} pictures.");

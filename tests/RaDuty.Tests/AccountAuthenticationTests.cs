@@ -151,7 +151,7 @@ public sealed class AccountAuthenticationTests
     }
 
     [Fact]
-    public async Task Hall_directors_can_delete_ras_but_not_other_directors_or_themselves()
+    public async Task Hall_directors_cannot_delete_accounts()
     {
         var hallId = Guid.NewGuid();
         var directorId = Guid.NewGuid();
@@ -164,12 +164,13 @@ public sealed class AccountAuthenticationTests
         await using var scope = provider.CreateAsyncScope();
         var users = scope.ServiceProvider.GetRequiredService<IUserService>();
 
-        await users.DeleteUserAsync(raId, CancellationToken.None);
+        var raDelete = await Assert.ThrowsAsync<AppException>(() => users.DeleteUserAsync(raId, CancellationToken.None));
         var directorDelete = await Assert.ThrowsAsync<AppException>(() => users.DeleteUserAsync(otherDirectorId, CancellationToken.None));
         var selfDelete = await Assert.ThrowsAsync<AppException>(() => users.DeleteUserAsync(directorId, CancellationToken.None));
 
-        Assert.Equal("USER_DELETE_NOT_ALLOWED", directorDelete.Code);
-        Assert.Equal("CANNOT_REMOVE_OWN_ACCESS", selfDelete.Code);
+        Assert.Equal("ACCOUNT_MANAGEMENT_NOT_ALLOWED", raDelete.Code);
+        Assert.Equal("ACCOUNT_MANAGEMENT_NOT_ALLOWED", directorDelete.Code);
+        Assert.Equal("ACCOUNT_MANAGEMENT_NOT_ALLOWED", selfDelete.Code);
     }
 
     private static ServiceProvider Services(CurrentUserDto? currentUser = null)

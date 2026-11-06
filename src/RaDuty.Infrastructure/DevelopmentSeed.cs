@@ -10,6 +10,12 @@ public static class DevelopmentSeed
     private static readonly Guid HallId = Guid.Parse("10000000-0000-0000-0000-000000000001");
     private static readonly Guid RetiredSeedUserId = Guid.Parse("20000000-0000-0000-0000-000000000009");
     private const string HallName = "Eltse Hall";
+    private const string HallCode = "ELTS";
+    private static readonly (string Name, string Code)[] CampusHalls =
+    [
+        ("Market Hall", "MARK"), ("Watson Hall", "WATS"), ("Lewis Hall", "LEWS"),
+        (HallName, HallCode), ("Twin Towers", "TWRS")
+    ];
     private static readonly StaffSeed[] CurrentStaff =
     [
         new("20000000-0000-0000-0000-000000000001", "Carol", "Ocker", "carol.ocker@wmpenn.edu", HallRole.HallDirector),
@@ -35,13 +41,15 @@ public static class DevelopmentSeed
                 existingHall.Name = HallName;
                 await db.SaveChangesAsync(cancellationToken);
             }
+            existingHall.Code = HallCode;
+            await EnsureCampusHallsAsync(db, cancellationToken);
             await SynchronizeDevelopmentStaffAsync(db, existingHall, passwordHasher, initialPassword, cancellationToken);
             await EnsureDormRosterAsync(db, existingHall, cancellationToken);
             return;
         }
         if (await db.ResidenceHalls.AnyAsync(cancellationToken)) return;
 
-        var hall = new ResidenceHall { Id = HallId, Name = HallName, TimeZone = "America/Chicago" };
+        var hall = new ResidenceHall { Id = HallId, Name = HallName, Code = HallCode, TimeZone = "America/Chicago" };
         var users = CurrentStaff.Select(User).ToArray();
         foreach (var user in users)
         {
@@ -74,8 +82,17 @@ public static class DevelopmentSeed
         }
         db.AddRange(current, previous);
         await db.SaveChangesAsync(cancellationToken);
+        await EnsureCampusHallsAsync(db, cancellationToken);
         await EnsureDormRosterAsync(db, hall, cancellationToken);
         await EnsureDevelopmentAccountsAsync(db, passwordHasher, initialPassword, cancellationToken);
+    }
+
+    private static async Task EnsureCampusHallsAsync(RaDutyDbContext db, CancellationToken cancellationToken)
+    {
+        var codes = await db.ResidenceHalls.Select(hall => hall.Code).ToListAsync(cancellationToken);
+        foreach (var (name, code) in CampusHalls.Where(seed => !codes.Contains(seed.Code, StringComparer.OrdinalIgnoreCase)))
+            db.ResidenceHalls.Add(new ResidenceHall { Name = name, Code = code, TimeZone = "America/Chicago" });
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task SynchronizeDevelopmentStaffAsync(RaDutyDbContext db, ResidenceHall hall,

@@ -269,7 +269,9 @@ public sealed class SchedulePdfService : ISchedulePdfService
     {
         HallRole.ResidentAssistant => 0,
         HallRole.HallDirector => 1,
-        HallRole.Admin => 2,
+        HallRole.AssistantDirectorOfResidenceLife => 2,
+        HallRole.DeanOfStudents => 3,
+        HallRole.Admin => 4,
         _ => 3
     };
 
@@ -282,6 +284,8 @@ public sealed class SchedulePdfService : ISchedulePdfService
         {
             HallRole.ResidentAssistant => "Resident Assistant",
             HallRole.HallDirector => "Hall Director",
+            HallRole.AssistantDirectorOfResidenceLife => "Assistant Director of Residence Life",
+            HallRole.DeanOfStudents => "Dean of Students",
             HallRole.Admin => "Admin",
             _ => person.Role.ToString()
         };

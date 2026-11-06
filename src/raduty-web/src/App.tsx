@@ -33,19 +33,20 @@ export default function App() {
   if (me.isError) return <AccessError error={me.error} onRetry={() => me.refetch()}
     onSignOut={async () => { await signOut(); queryClient.clear(); window.location.assign('/') }} />
   if (!me.data) return null
+  const isCampusAdministrator = ['Admin', 'DeanOfStudents', 'AssistantDirectorOfResidenceLife'].includes(me.data.role)
   return <ToastProvider><AppLayout user={me.data}><Suspense fallback={<RouteLoading />}><Routes>
     <Route path="/" element={<HomePage user={me.data} />} />
     <Route path="/schedule" element={<SchedulePage user={me.data} />} />
-    <Route path="/dorm-checks" element={<DormCheckPage />} />
-    <Route path="/dorm-sweeps" element={<DormSweepPage />} />
+    <Route path="/dorm-checks" element={<DormCheckPage user={me.data} />} />
+    <Route path="/dorm-sweeps" element={<DormSweepPage user={me.data} />} />
     <Route path="/residents" element={<ResidentManagementPage user={me.data} />} />
     <Route path="/incidents" element={<IncidentReportsPage user={me.data} />} />
     <Route path="/directory" element={<DirectoryPage />} />
     <Route path="/profile" element={<ProfilePage user={me.data} />} />
-    <Route path="/admin" element={me.data.role === 'HallDirector' || me.data.role === 'Admin' ? <AdminDashboardPage /> : <Navigate to="/" replace />} />
-    <Route path="/admin/users" element={me.data.role === 'HallDirector' || me.data.role === 'Admin' ? <UserManagementPage currentUser={me.data} /> : <Navigate to="/" replace />} />
-    <Route path="/admin/residents" element={me.data.role === 'HallDirector' || me.data.role === 'Admin' ? <DormRosterImportPage /> : <Navigate to="/" replace />} />
-    <Route path="/admin/audit" element={me.data.role === 'HallDirector' || me.data.role === 'Admin' ? <AuditLogPage /> : <Navigate to="/" replace />} />
+    <Route path="/admin" element={<AdminDashboardPage currentUser={me.data} />} />
+    <Route path="/admin/users" element={isCampusAdministrator ? <UserManagementPage currentUser={me.data} /> : <Navigate to="/admin" replace />} />
+    <Route path="/admin/residents" element={isCampusAdministrator ? <DormRosterImportPage /> : <Navigate to="/admin" replace />} />
+    <Route path="/admin/audit" element={isCampusAdministrator ? <AuditLogPage /> : <Navigate to="/admin" replace />} />
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes></Suspense></AppLayout></ToastProvider>
 }
@@ -60,7 +61,7 @@ export function SignInPage({ onSignedIn }: { onSignedIn: (mustChangePassword: bo
     catch (cause) { setError(cause instanceof ApiError ? cause.problem.title : 'Sign-in could not be completed.') }
     finally { setBusy(false) }
   }
-  return <main className="signin-page"><section className="signin-panel"><div className="signin-brand"><span className="brand__mark">EH</span><span><strong>Eltse Hall</strong><small>William Penn Residence Life</small></span></div><div className="signin-copy"><span className="eyebrow">William Penn University</span><h1>Welcome back</h1><p>Sign in to manage night-duty coverage, residents, and room checks.</p></div><form className="signin-form" onSubmit={submit}><label className="field"><span>School email</span><input type="email" inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@wmpenn.edu" required /></label><PasswordField label="Password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><label className="signin-remember"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /><span>Keep me signed in on this device</span></label>{error && <p className="signin-error" role="alert">{error}</p>}<button className="signin-button" type="submit" disabled={busy}><KeyRound size={19} /><span>{busy ? 'Signing in…' : 'Sign in'}</span><ArrowRight size={18} /></button><small className="signin-help">Forgot your password? Ask your Hall Director or administrator to reset it.</small></form><div className="access-statement"><ShieldCheck size={18} /><p>Only provisioned Residence Life staff with an @wmpenn.edu email can sign in.</p></div></section><aside className="signin-context"><MoonStar /><div><strong>Eltse Hall</strong><span>Secure tools for the residence-life team</span></div></aside></main>
+  return <main className="signin-page"><section className="signin-panel"><div className="signin-brand"><span className="brand__mark">WPU</span><span><strong>WPU Res Life Portal</strong><small>William Penn Residence Life</small></span></div><div className="signin-copy"><span className="eyebrow">William Penn University</span><h1>Welcome back</h1><p>Sign in to manage residence-life work for your assigned hall.</p></div><form className="signin-form" onSubmit={submit}><label className="field"><span>School email</span><input type="email" inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@wmpenn.edu" required /></label><PasswordField label="Password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><label className="signin-remember"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /><span>Keep me signed in on this device</span></label>{error && <p className="signin-error" role="alert">{error}</p>}<button className="signin-button" type="submit" disabled={busy}><KeyRound size={19} /><span>{busy ? 'Signing in…' : 'Sign in'}</span><ArrowRight size={18} /></button><small className="signin-help">Forgot your password? Ask a campus administrator to reset it.</small></form><div className="access-statement"><ShieldCheck size={18} /><p>Only provisioned Residence Life staff with an @wmpenn.edu email can sign in.</p></div></section><aside className="signin-context"><MoonStar /><div><strong>WPU Res Life Portal</strong><span>Secure tools for the residence-life team</span></div></aside></main>
 }
 
 function ChangePasswordPage({ onChanged }: { onChanged: () => Promise<void> | void }) {
@@ -77,11 +78,11 @@ function ChangePasswordPage({ onChanged }: { onChanged: () => Promise<void> | vo
   return <main className="password-page"><section className="password-panel"><div className="access-error__icon"><KeyRound /></div><span className="eyebrow">Secure your account</span><h1>Choose your password</h1><p>The temporary password can only be used to reach this step. Create a private passphrase before continuing.</p><form className="signin-form" onSubmit={submit}><PasswordField label="Temporary password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required /><PasswordField label="New password" autoComplete="new-password" minLength={15} maxLength={128} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required hint="Use 15–128 characters. A long, unique passphrase is recommended." /><PasswordField label="Confirm new password" autoComplete="new-password" minLength={15} maxLength={128} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required />{error && <p className="signin-error" role="alert">{error}</p>}<button className="button button--primary" disabled={busy}>{busy ? 'Saving…' : 'Create new password'}</button></form></section></main>
 }
 
-function AppLoading() { return <main className="app-loading"><div className="signin-brand"><span className="brand__mark">EH</span><strong>Eltse Hall</strong></div><div className="loading-line" /><p>Preparing your hall tools…</p></main> }
+function AppLoading() { return <main className="app-loading"><div className="signin-brand"><span className="brand__mark">WPU</span><strong>WPU Res Life Portal</strong></div><div className="loading-line" /><p>Preparing your hall tools…</p></main> }
 
 function RouteLoading() { return <div className="page"><div className="skeleton skeleton--title" /><div className="skeleton skeleton--panel" aria-label="Loading page" /></div> }
 
 export function AccessError({ error, onRetry, onSignOut }: { error: Error; onRetry: () => void; onSignOut: () => void }) {
   const forbidden = error instanceof ApiError && error.problem.status === 403
-  return <main className="access-error"><div className="access-error__icon">{forbidden ? <LockKeyhole /> : <MoonStar />}</div><span className="eyebrow">Eltse Hall</span><h1>{forbidden ? 'Access is not available' : 'We could not load your account'}</h1><p>{error instanceof ApiError ? error.problem.title : 'Check your connection and try again.'}</p><div className="access-actions"><button className="button button--primary" onClick={onRetry}>Try again</button><button className="button button--quiet" onClick={onSignOut}>Sign out</button></div><small>{forbidden ? 'Ask your Hall Director to confirm that your Eltse Hall account is active.' : 'If this continues, contact Residence Life support.'}</small></main>
+  return <main className="access-error"><div className="access-error__icon">{forbidden ? <LockKeyhole /> : <MoonStar />}</div><span className="eyebrow">WPU Res Life Portal</span><h1>{forbidden ? 'Access is not available' : 'We could not load your account'}</h1><p>{error instanceof ApiError ? error.problem.title : 'Check your connection and try again.'}</p><div className="access-actions"><button className="button button--primary" onClick={onRetry}>Try again</button><button className="button button--quiet" onClick={onSignOut}>Sign out</button></div><small>{forbidden ? 'Ask a campus administrator to confirm that your account is active for its assigned hall.' : 'If this continues, contact Residence Life support.'}</small></main>
 }

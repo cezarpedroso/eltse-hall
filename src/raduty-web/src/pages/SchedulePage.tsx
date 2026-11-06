@@ -25,7 +25,7 @@ export function SchedulePage({ user }: { user: CurrentUser }) {
       toast(`${monthName(period.month)} schedule started.`)
     },
   })
-  const isManager = user.role === 'HallDirector' || user.role === 'Admin'
+  const isManager = user.role === 'HallDirector' || user.role === 'Admin' || user.role === 'DeanOfStudents' || user.role === 'AssistantDirectorOfResidenceLife'
   const isMissing = schedule.error instanceof ApiError && schedule.error.problem.code === 'SCHEDULE_NOT_FOUND'
   const canGoBack = compareSchedulePeriods(period, currentPeriod) > 0
   const canGoForward = compareSchedulePeriods(period, latestPeriod) < 0
