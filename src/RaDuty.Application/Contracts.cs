@@ -244,6 +244,8 @@ public interface IIncidentReportService
     Task<IReadOnlyList<IncidentReportSummaryDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<IncidentReportDto> GetAsync(Guid incidentId, CancellationToken cancellationToken);
     Task<IncidentReportDto> CreateAsync(CreateIncidentReportRequest request, CancellationToken cancellationToken);
+    Task<IncidentReportDto> UpdateAsync(Guid incidentId, CreateIncidentReportRequest request, CancellationToken cancellationToken);
+    Task DeleteAsync(Guid incidentId, CancellationToken cancellationToken);
 }
 
 public interface IIncidentReportPdfService
