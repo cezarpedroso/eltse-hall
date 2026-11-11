@@ -49,6 +49,14 @@ public sealed class ClaimsCurrentIdentityAccessor(IHttpContextAccessor contextAc
 public sealed class ApplicationCookieEvents(RaDutyDbContext db, IConfiguration configuration)
     : CookieAuthenticationEvents
 {
+    public override Task RedirectToLogin(RedirectContext<CookieAuthenticationOptions> context) =>
+        ResidenceLifeAuthorizationResultHandler.WriteProblemAsync(
+            context.HttpContext, 401, "UNAUTHENTICATED", "Sign in is required.");
+
+    public override Task RedirectToAccessDenied(RedirectContext<CookieAuthenticationOptions> context) =>
+        ResidenceLifeAuthorizationResultHandler.WriteProblemAsync(
+            context.HttpContext, 403, "FORBIDDEN", "You do not have permission to perform this action.");
+
     public override async Task ValidatePrincipal(CookieValidatePrincipalContext context)
     {
         var userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);

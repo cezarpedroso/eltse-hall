@@ -28,10 +28,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = false;
         options.EventsType = typeof(ApplicationCookieEvents);
-        options.Events.OnRedirectToLogin = context => ResidenceLifeAuthorizationResultHandler.WriteProblemAsync(
-            context.HttpContext, 401, "UNAUTHENTICATED", "Sign in is required.");
-        options.Events.OnRedirectToAccessDenied = context => ResidenceLifeAuthorizationResultHandler.WriteProblemAsync(
-            context.HttpContext, 403, "FORBIDDEN", "You do not have permission to perform this action.");
     });
 
 builder.Services.AddAuthorization(options =>
