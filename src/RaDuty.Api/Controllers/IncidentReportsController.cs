@@ -22,6 +22,17 @@ public sealed class IncidentReportsController(IIncidentReportService incidents, 
         return Created($"/api/incidents/{incident.Id}", incident);
     }
 
+    [HttpPut("{incidentId:guid}")]
+    public Task<IncidentReportDto> Update(Guid incidentId, CreateIncidentReportRequest request, CancellationToken cancellationToken) =>
+        incidents.UpdateAsync(incidentId, request, cancellationToken);
+
+    [HttpDelete("{incidentId:guid}")]
+    public async Task<IActionResult> Delete(Guid incidentId, CancellationToken cancellationToken)
+    {
+        await incidents.DeleteAsync(incidentId, cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("{incidentId:guid}/pdf")]
     public async Task<IActionResult> Pdf(Guid incidentId, CancellationToken cancellationToken)
     {
