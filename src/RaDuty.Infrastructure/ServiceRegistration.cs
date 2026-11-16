@@ -39,6 +39,7 @@ public static class ServiceRegistration
         services.AddScoped<IDormSweepPhotoService, DormSweepPhotoService>();
         services.AddScoped<IDormRosterImportService, DormRosterImportService>();
         services.AddScoped<IDormResidentManagementService, DormResidentManagementService>();
+        services.AddScoped<IResidentRosterExportService, ResidentRosterExportService>();
         services.AddScoped<IIncidentReportService, IncidentReportService>();
         services.AddScoped<IResidenceHallManagementService, ResidenceHallManagementService>();
         services.AddSingleton<ISchedulePdfService, SchedulePdfService>();

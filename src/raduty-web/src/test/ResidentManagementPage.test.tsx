@@ -3,8 +3,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { ToastProvider } from '../components/ui'
+import { downloadFile } from '../api'
 import { ResidentManagementPage } from '../pages/ResidentManagementPage'
 import { directorUser, raUser } from './fixtures'
+
+vi.mock('../api', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../api')>(),
+  downloadFile: vi.fn(async () => {}),
+}))
 
 const resident = { id: 'resident-1', firstName: 'Alex', lastName: 'Rivera', dormRoomId: 'room-a', roomCode: 'ELTS-01A', sportOrActivity: 'Soccer' }
 const rooms = [
@@ -30,6 +36,14 @@ describe('Resident management', () => {
     }))
   })
   afterEach(() => vi.unstubAllGlobals())
+
+  it('downloads the current hall resident roster', async () => {
+    renderPage()
+    await screen.findByText('Alex Rivera')
+    fireEvent.click(screen.getByRole('button', { name: 'Export Excel' }))
+
+    await waitFor(() => expect(downloadFile).toHaveBeenCalledWith('/api/residents/export', 'eltse-hall-residents.xlsx'))
+  })
 
   it('lets an RA move a resident to another room in their hall', async () => {
     renderPage()

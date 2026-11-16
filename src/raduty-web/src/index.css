@@ -516,7 +516,7 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .resident-management-heading { margin-bottom: 22px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
 .resident-management-heading h1 { margin-bottom: 7px; }
 .resident-management-heading p { max-width: 620px; margin: 0; color: var(--muted); font-size: .86rem; }
-.resident-heading-actions { display: flex; gap: 8px; }
+.resident-heading-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .resident-toolbar { min-height: 64px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--line); border-radius: 15px 15px 0 0; background: var(--paper); }
 .resident-toolbar .search-field { width: min(430px, 100%); }
 .resident-toolbar > span { color: var(--muted); font-size: .7rem; white-space: nowrap; }

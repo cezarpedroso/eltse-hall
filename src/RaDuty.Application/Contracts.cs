@@ -121,6 +121,7 @@ public sealed record ManagedDormResidentDto(Guid Id, string FirstName, string La
 public sealed record DormRoomOptionDto(Guid Id, string RoomCode, int Occupancy, int Capacity = 2);
 public sealed record SaveDormResidentRequest(string FirstName, string LastName, Guid DormRoomId, string? SportOrActivity);
 public sealed record ClearDormResidentsResult(int DeletedResidents);
+public sealed record ResidentRosterWorkbookDto(byte[] Content, string FileName);
 public sealed record ResidenceHallDto(Guid Id, string Name, string Code, string TimeZone, bool IsActive, int StaffCount, int RoomCount);
 public sealed record CreateResidenceHallRequest(string Name, string Code, string? TimeZone = null);
 public sealed record IncidentStaffDto(Guid Id, string Name);
@@ -237,6 +238,11 @@ public interface IDormResidentManagementService
     Task<ManagedDormResidentDto> UpdateAsync(Guid residentId, SaveDormResidentRequest request, CancellationToken cancellationToken);
     Task RemoveAsync(Guid residentId, CancellationToken cancellationToken);
     Task<ClearDormResidentsResult> ClearAsync(CancellationToken cancellationToken);
+}
+
+public interface IResidentRosterExportService
+{
+    Task<ResidentRosterWorkbookDto> ExportAsync(CancellationToken cancellationToken);
 }
 
 public interface IIncidentReportService
