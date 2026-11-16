@@ -101,7 +101,7 @@ public sealed class DormCheckTests
     {
         await using var db = new RaDutyDbContext(new DbContextOptionsBuilder<RaDutyDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-        var hall = new ResidenceHall { Name = "Eltse Hall" };
+        var hall = new ResidenceHall { Name = "Eltse Hall", Code = "ELTS" };
         var ra = new User
         {
             SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",

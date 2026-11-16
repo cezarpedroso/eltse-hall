@@ -35,7 +35,7 @@ public sealed class DormCheckPdfService : IDormCheckPdfService
                     foreach (var suite in report.Suites)
                     {
                         column.Item().Element(container => SuiteHeader(container, suite.SuiteNumber,
-                            $"{suite.Rooms.Count(x => x.LatestCheck is not null)}/4 checked"));
+                            $"{suite.Rooms.Count(x => x.LatestCheck is not null)}/{suite.Rooms.Count} checked"));
                         foreach (var room in suite.Rooms)
                             column.Item().Element(container => RoomCard(container, room));
                     }
@@ -103,7 +103,7 @@ public sealed class DormCheckPdfService : IDormCheckPdfService
             column.Spacing(4);
             column.Item().Row(row =>
             {
-                row.ConstantItem(54).Text($"Room {room.RoomLetter}").Bold().FontSize(10).FontColor(Ink);
+                row.ConstantItem(74).Text(room.RoomLetter.Length > 0 ? $"Room {room.RoomLetter}" : room.RoomCode).Bold().FontSize(10).FontColor(Ink);
                 row.RelativeItem().Text(room.Residents.Count == 0 ? "Vacant" : string.Join("  |  ", room.Residents.Select(x => $"{x.FirstName} {x.LastName}"))).FontSize(8).FontColor(Muted);
                 row.ConstantItem(145).AlignRight().Text(room.LatestCheck is null ? "NOT CHECKED" : $"Checked by {room.LatestCheck.CheckedByName}")
                     .SemiBold().FontSize(7).FontColor(room.LatestCheck is null ? "#9A3F37" : Primary);

@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="SeedData\elts-residents.json" />
+    <EmbeddedResource Include="SeedData\campus-dorm-rooms.json" />
   </ItemGroup>
 
   <PropertyGroup>
