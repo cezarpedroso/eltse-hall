@@ -69,11 +69,14 @@ public sealed class AccountAuthenticationTests
         Assert.Equal("SIGN_IN_TEMPORARILY_LOCKED", locked.Code);
     }
 
-    [Fact]
-    public async Task Created_staff_accounts_receive_the_standard_temporary_password()
+    [Theory]
+    [InlineData(HallRole.Admin)]
+    [InlineData(HallRole.DeanOfStudents)]
+    [InlineData(HallRole.AssistantDirectorOfResidenceLife)]
+    public async Task Campus_leaders_can_create_staff_accounts_with_a_temporary_password(HallRole actorRole)
     {
         var actor = new CurrentUserDto(Guid.NewGuid(), "admin@wmpenn.edu", "Cezar", "Pedroso",
-            null, null, HallRole.Admin, true, Guid.NewGuid(), "Eltse Hall");
+            null, null, actorRole, true, Guid.NewGuid(), "Eltse Hall");
         await using var provider = Services(actor);
         await using var scope = provider.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<RaDutyDbContext>();
@@ -105,12 +108,15 @@ public sealed class AccountAuthenticationTests
         Assert.Equal("WEAK_PASSWORD", error.Code);
     }
 
-    [Fact]
-    public async Task Admins_can_delete_staff_access_without_removing_history_records()
+    [Theory]
+    [InlineData(HallRole.Admin)]
+    [InlineData(HallRole.DeanOfStudents)]
+    [InlineData(HallRole.AssistantDirectorOfResidenceLife)]
+    public async Task Campus_leaders_can_remove_staff_access_without_removing_history_records(HallRole actorRole)
     {
         var hallId = Guid.NewGuid();
         var actor = new CurrentUserDto(Guid.NewGuid(), "admin@wmpenn.edu", "Cezar", "Pedroso",
-            null, null, HallRole.Admin, true, hallId, "Eltse Hall");
+            null, null, actorRole, true, hallId, "Eltse Hall");
         await using var provider = Services(actor);
         var targetId = await SeedStaffAsync(provider, hallId, "ra@wmpenn.edu", HallRole.ResidentAssistant);
         await using var scope = provider.CreateAsyncScope();
