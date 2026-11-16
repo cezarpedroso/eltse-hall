@@ -47,7 +47,7 @@ public sealed class DormCheckService(RaDutyDbContext db, ICurrentUserService cur
     public async Task<DormRoomCheckDto> SubmitAsync(Guid roomId, SubmitDormRoomCheckRequest request, CancellationToken cancellationToken)
     {
         var current = await currentUserService.GetAsync(cancellationToken);
-        var room = await db.DormRooms.SingleOrDefaultAsync(x => x.Id == roomId && x.ResidenceHallId == current.ResidenceHallId, cancellationToken)
+        var room = await db.DormRooms.Include(x => x.ResidenceHall).SingleOrDefaultAsync(x => x.Id == roomId && x.ResidenceHallId == current.ResidenceHallId, cancellationToken)
             ?? throw new AppException(404, "DORM_ROOM_NOT_FOUND", "Dorm room not found in your hall.");
         var notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
         if (notes?.Length > 2000) throw new AppException(400, "NOTES_TOO_LONG", "Notes must be 2,000 characters or fewer.");
@@ -112,7 +112,7 @@ public sealed class DormCheckService(RaDutyDbContext db, ICurrentUserService cur
         return new DormCheckResetDto(checks.Count, storedPhotos.Count);
     }
 
-    private static string RoomCode(DormRoom room) => $"ELTS-{room.SuiteNumber}{room.RoomLetter}";
+    private static string RoomCode(DormRoom room) => DormRoomNaming.Code(room);
 
     private static string ResolvePhotoStorageRoot(IConfiguration? configuration)
     {
@@ -135,6 +135,7 @@ public sealed class DormCheckService(RaDutyDbContext db, ICurrentUserService cur
 
     private Task<List<DormRoom>> LoadRoomsAsync(Guid residenceHallId, CancellationToken cancellationToken) =>
         db.DormRooms.AsNoTracking()
+            .Include(x => x.ResidenceHall)
             .Include(x => x.Residents)
             .Include(x => x.Checks.OrderByDescending(check => check.CheckedAt).Take(1)).ThenInclude(x => x.CheckedByUser)
             .Include(x => x.Checks.OrderByDescending(check => check.CheckedAt).Take(1)).ThenInclude(x => x.Photos)

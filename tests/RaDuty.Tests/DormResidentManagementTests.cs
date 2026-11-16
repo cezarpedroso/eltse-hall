@@ -12,7 +12,7 @@ public sealed class DormResidentManagementTests
     {
         await using var db = new RaDutyDbContext(new DbContextOptionsBuilder<RaDutyDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-        var hall = new ResidenceHall { Name = "Eltse Hall" };
+        var hall = new ResidenceHall { Name = "Eltse Hall", Code = "ELTS" };
         var ra = new User
         {
             SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee",
@@ -69,6 +69,51 @@ public sealed class DormResidentManagementTests
             new SaveDormResidentRequest("Moving", "Resident", roomB.Id, null), CancellationToken.None));
 
         Assert.Equal("DORM_ROOM_AT_CAPACITY", error.Code);
+    }
+
+    [Fact]
+    public async Task Lewis_room_uses_source_label_and_its_single_resident_capacity()
+    {
+        await using var db = new RaDutyDbContext(new DbContextOptionsBuilder<RaDutyDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var hall = new ResidenceHall { Name = "Lewis Hall", Code = "LEWS" };
+        var ra = new User { SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee", Role = HallRole.ResidentAssistant };
+        var room = new DormRoom { ResidenceHall = hall, SuiteNumber = "A204", RoomLetter = "", Capacity = 1 };
+        db.AddRange(hall, ra, room);
+        await db.SaveChangesAsync();
+        var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
+            null, null, ra.Role, true, hall.Id, hall.Name);
+        var service = new DormResidentManagementService(db, new StubCurrentUserService(current));
+
+        var added = await service.CreateAsync(new SaveDormResidentRequest("Alex", "Rivera", room.Id, null), CancellationToken.None);
+        var option = Assert.Single(await service.GetRoomsAsync(CancellationToken.None));
+        var error = await Assert.ThrowsAsync<AppException>(() => service.CreateAsync(
+            new SaveDormResidentRequest("Sam", "Lee", room.Id, null), CancellationToken.None));
+
+        Assert.Equal("LEWI-A204", added.RoomCode);
+        Assert.Equal("LEWI-A204", option.RoomCode);
+        Assert.Equal(1, option.Capacity);
+        Assert.Equal("DORM_ROOM_AT_CAPACITY", error.Code);
+    }
+
+    [Fact]
+    public async Task Rosenberger_rooms_share_one_hall_and_keep_their_original_labels()
+    {
+        await using var db = new RaDutyDbContext(new DbContextOptionsBuilder<RaDutyDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var hall = new ResidenceHall { Name = "Rosenberger Apartments", Code = "ROS" };
+        var ra = new User { SchoolEmail = "ra@example.edu", FirstName = "Jordan", LastName = "Lee", Role = HallRole.ResidentAssistant };
+        db.AddRange(hall, ra,
+            new DormRoom { ResidenceHall = hall, SuiteNumber = "01", RoomLetter = "", Capacity = 1, SourceCode = "ROS1-01" },
+            new DormRoom { ResidenceHall = hall, SuiteNumber = "04", RoomLetter = "", Capacity = 2, SourceCode = "ROS2-04" });
+        await db.SaveChangesAsync();
+        var current = new CurrentUserDto(ra.Id, ra.SchoolEmail, ra.FirstName, ra.LastName,
+            null, null, ra.Role, true, hall.Id, hall.Name);
+
+        var rooms = await new DormResidentManagementService(db, new StubCurrentUserService(current))
+            .GetRoomsAsync(CancellationToken.None);
+
+        Assert.Equal(new[] { "ROS1-01", "ROS2-04" }, rooms.Select(room => room.RoomCode));
     }
 
     [Theory]

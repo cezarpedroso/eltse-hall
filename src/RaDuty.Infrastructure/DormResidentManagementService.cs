@@ -7,11 +7,10 @@ namespace RaDuty.Infrastructure;
 
 public sealed class DormResidentManagementService(RaDutyDbContext db, ICurrentUserService currentUserService) : IDormResidentManagementService
 {
-    private const int RoomCapacity = 2;
-
     public async Task<IReadOnlyList<ManagedDormResidentDto>> GetAsync(string? search, CancellationToken cancellationToken)
     {
         var current = await currentUserService.GetAsync(cancellationToken);
+        var prefix = await RoomPrefixAsync(current.ResidenceHallId, cancellationToken);
         var query = db.DormResidents.AsNoTracking().Include(resident => resident.DormRoom)
             .Where(resident => resident.DormRoom.ResidenceHallId == current.ResidenceHallId);
         if (!string.IsNullOrWhiteSpace(search))
@@ -23,16 +22,17 @@ public sealed class DormResidentManagementService(RaDutyDbContext db, ICurrentUs
         return await query.OrderBy(resident => resident.DormRoom.SuiteNumber).ThenBy(resident => resident.DormRoom.RoomLetter)
             .ThenBy(resident => resident.LastName).ThenBy(resident => resident.FirstName)
             .Select(resident => new ManagedDormResidentDto(resident.Id, resident.FirstName, resident.LastName,
-                resident.DormRoomId, $"ELTS-{resident.DormRoom.SuiteNumber}{resident.DormRoom.RoomLetter}", resident.SportOrActivity))
+                resident.DormRoomId, resident.DormRoom.SourceCode ?? $"{prefix}-{resident.DormRoom.SuiteNumber}{resident.DormRoom.RoomLetter}", resident.SportOrActivity))
             .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<DormRoomOptionDto>> GetRoomsAsync(CancellationToken cancellationToken)
     {
         var current = await currentUserService.GetAsync(cancellationToken);
+        var prefix = await RoomPrefixAsync(current.ResidenceHallId, cancellationToken);
         return await db.DormRooms.AsNoTracking().Where(room => room.ResidenceHallId == current.ResidenceHallId)
             .OrderBy(room => room.SuiteNumber).ThenBy(room => room.RoomLetter)
-            .Select(room => new DormRoomOptionDto(room.Id, $"ELTS-{room.SuiteNumber}{room.RoomLetter}", room.Residents.Count, RoomCapacity))
+            .Select(room => new DormRoomOptionDto(room.Id, room.SourceCode ?? $"{prefix}-{room.SuiteNumber}{room.RoomLetter}", room.Residents.Count, room.Capacity))
             .ToListAsync(cancellationToken);
     }
 
@@ -41,8 +41,8 @@ public sealed class DormResidentManagementService(RaDutyDbContext db, ICurrentUs
         var current = await currentUserService.GetAsync(cancellationToken);
         var values = Validate(request);
         var room = await GetRoomAsync(request.DormRoomId, current.ResidenceHallId, cancellationToken);
-        if (room.Residents.Count >= RoomCapacity)
-            throw new AppException(409, "DORM_ROOM_AT_CAPACITY", $"{RoomCode(room)} already has {RoomCapacity} residents.");
+        if (room.Residents.Count >= room.Capacity)
+            throw new AppException(409, "DORM_ROOM_AT_CAPACITY", $"{RoomCode(room)} already has {room.Capacity} residents.");
         await EnsureUniqueAsync(values.FirstName, values.LastName, current.ResidenceHallId, null, cancellationToken);
 
         var resident = new DormResident
@@ -63,12 +63,12 @@ public sealed class DormResidentManagementService(RaDutyDbContext db, ICurrentUs
     {
         var current = await currentUserService.GetAsync(cancellationToken);
         var values = Validate(request);
-        var resident = await db.DormResidents.Include(item => item.DormRoom)
+        var resident = await db.DormResidents.Include(item => item.DormRoom).ThenInclude(room => room.ResidenceHall)
             .SingleOrDefaultAsync(item => item.Id == residentId && item.DormRoom.ResidenceHallId == current.ResidenceHallId, cancellationToken)
             ?? throw new AppException(404, "DORM_RESIDENT_NOT_FOUND", "Resident not found in Eltse Hall.");
         var room = await GetRoomAsync(request.DormRoomId, current.ResidenceHallId, cancellationToken);
-        if (resident.DormRoomId != room.Id && room.Residents.Count >= RoomCapacity)
-            throw new AppException(409, "DORM_ROOM_AT_CAPACITY", $"{RoomCode(room)} already has {RoomCapacity} residents.");
+        if (resident.DormRoomId != room.Id && room.Residents.Count >= room.Capacity)
+            throw new AppException(409, "DORM_ROOM_AT_CAPACITY", $"{RoomCode(room)} already has {room.Capacity} residents.");
         await EnsureUniqueAsync(values.FirstName, values.LastName, current.ResidenceHallId, resident.Id, cancellationToken);
 
         var before = new { resident.FirstName, resident.LastName, Room = RoomCode(resident.DormRoom), resident.SportOrActivity };
@@ -86,7 +86,7 @@ public sealed class DormResidentManagementService(RaDutyDbContext db, ICurrentUs
     public async Task RemoveAsync(Guid residentId, CancellationToken cancellationToken)
     {
         var current = await currentUserService.GetAsync(cancellationToken);
-        var resident = await db.DormResidents.Include(item => item.DormRoom)
+        var resident = await db.DormResidents.Include(item => item.DormRoom).ThenInclude(room => room.ResidenceHall)
             .SingleOrDefaultAsync(item => item.Id == residentId && item.DormRoom.ResidenceHallId == current.ResidenceHallId, cancellationToken)
             ?? throw new AppException(404, "DORM_RESIDENT_NOT_FOUND", "Resident not found in Eltse Hall.");
         db.AuditLogs.Add(Audit(current.Id, "DORM_RESIDENT_TRANSFERRED_OUT", resident.Id,
@@ -120,7 +120,7 @@ public sealed class DormResidentManagementService(RaDutyDbContext db, ICurrentUs
     }
 
     private async Task<DormRoom> GetRoomAsync(Guid roomId, Guid hallId, CancellationToken cancellationToken) =>
-        await db.DormRooms.Include(room => room.Residents)
+        await db.DormRooms.Include(room => room.ResidenceHall).Include(room => room.Residents)
             .SingleOrDefaultAsync(room => room.Id == roomId && room.ResidenceHallId == hallId, cancellationToken)
         ?? throw new AppException(404, "DORM_ROOM_NOT_FOUND", "The selected room was not found in Eltse Hall.");
 
@@ -149,7 +149,10 @@ public sealed class DormResidentManagementService(RaDutyDbContext db, ICurrentUs
 
     private static ManagedDormResidentDto ToDto(DormResident resident, DormRoom room) => new(resident.Id,
         resident.FirstName, resident.LastName, room.Id, RoomCode(room), resident.SportOrActivity);
-    private static string RoomCode(DormRoom room) => $"ELTS-{room.SuiteNumber}{room.RoomLetter}";
+    private static string RoomCode(DormRoom room) => DormRoomNaming.Code(room);
+    private async Task<string> RoomPrefixAsync(Guid hallId, CancellationToken cancellationToken) =>
+        DormRoomNaming.Prefix(await db.ResidenceHalls.Where(hall => hall.Id == hallId)
+            .Select(hall => hall.Code).SingleAsync(cancellationToken));
     private static AuditLog Audit(Guid actor, string action, Guid residentId, object? before, object? after) => new()
     {
         ActorUserId = actor,

@@ -102,8 +102,9 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
         modelBuilder.Entity<DormRoom>(entity =>
         {
             entity.HasIndex(x => new { x.ResidenceHallId, x.SuiteNumber, x.RoomLetter }).IsUnique();
-            entity.Property(x => x.SuiteNumber).HasMaxLength(2);
+            entity.Property(x => x.SuiteNumber).HasMaxLength(4);
             entity.Property(x => x.RoomLetter).HasMaxLength(1);
+            entity.Property(x => x.SourceCode).HasMaxLength(24);
             entity.HasOne(x => x.ResidenceHall).WithMany(x => x.DormRooms).HasForeignKey(x => x.ResidenceHallId).OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -125,7 +126,7 @@ public sealed class RaDutyDbContext(DbContextOptions<RaDutyDbContext> options)
 
         modelBuilder.Entity<DormSuiteSweep>(entity =>
         {
-            entity.Property(x => x.SuiteNumber).HasMaxLength(2);
+            entity.Property(x => x.SuiteNumber).HasMaxLength(4);
             entity.Property(x => x.Notes).HasMaxLength(2000);
             entity.HasIndex(x => new { x.ResidenceHallId, x.SuiteNumber, x.CheckedAt });
             entity.HasOne(x => x.ResidenceHall).WithMany(x => x.DormSuiteSweeps).HasForeignKey(x => x.ResidenceHallId).OnDelete(DeleteBehavior.Restrict);

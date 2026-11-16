@@ -28,6 +28,7 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
         var current = await currentUserService.GetAsync(cancellationToken);
         var latestBySuite = await LoadLatestSweepsAsync(current.ResidenceHallId, cancellationToken);
         var residents = await db.DormRooms.AsNoTracking()
+            .Include(x => x.ResidenceHall)
             .Include(x => x.Residents)
             .Where(x => x.ResidenceHallId == current.ResidenceHallId)
             .OrderBy(x => x.SuiteNumber).ThenBy(x => x.RoomLetter)
@@ -128,12 +129,14 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
     {
         var cleaned = suiteNumber.Trim().ToUpperInvariant()
             .Replace("-", "", StringComparison.Ordinal);
-        if (!int.TryParse(cleaned, out var number) || number < 1 || number > 99)
+        if (cleaned.Length is < 1 or > 4 || !cleaned.All(char.IsLetterOrDigit))
         {
             throw new AppException(400, "INVALID_SUITE_NUMBER", "Use a valid suite number.");
         }
 
-        return number.ToString("00");
+        return int.TryParse(cleaned, out var number) && number is >= 1 and <= 99
+            ? number.ToString("00")
+            : cleaned;
     }
 
     private static DormSuiteSweepSummaryDto ToSummaryDto(DormSuiteSweep sweep) => new(sweep.Id,
@@ -171,7 +174,7 @@ public sealed class DormSweepService(RaDutyDbContext db, ICurrentUserService cur
             .Select(room => room.SuiteNumber).Distinct().OrderBy(number => number).ToListAsync(cancellationToken);
     }
 
-    private static string RoomCode(DormRoom room) => $"ELTS-{room.SuiteNumber}{room.RoomLetter}";
+    private static string RoomCode(DormRoom room) => DormRoomNaming.Code(room);
 
     private static string ResolvePhotoStorageRoot(IConfiguration? configuration)
     {

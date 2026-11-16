@@ -118,6 +118,8 @@ public sealed class DormRoom : Entity
     public ResidenceHall ResidenceHall { get; set; } = null!;
     public required string SuiteNumber { get; set; }
     public required string RoomLetter { get; set; }
+    public int Capacity { get; set; } = 2;
+    public string? SourceCode { get; set; }
     public ICollection<DormResident> Residents { get; set; } = [];
     public ICollection<DormRoomCheck> Checks { get; set; } = [];
 }

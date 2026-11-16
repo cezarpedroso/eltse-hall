@@ -979,7 +979,7 @@ td a:hover { color: var(--primary); text-decoration: underline; }
 .room-row:last-child { border-bottom: 0; }
 .room-row:hover { background: #f7f9f7; }
 .room-row.is-checked { background: #f6faf7; }
-.room-letter { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: #eef1ef; color: var(--ink); font-size: .78rem; font-weight: 800; }
+.room-letter { width: 42px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: #eef1ef; color: var(--ink); font-size: .72rem; font-weight: 800; }
 .room-row.is-checked .room-letter { background: var(--primary); color: #fff; }
 .room-people { min-width: 0; display: grid; gap: 2px; }
 .room-people strong { font-size: .78rem; }
