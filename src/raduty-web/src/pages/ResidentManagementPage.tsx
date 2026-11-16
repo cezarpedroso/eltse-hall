@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRightLeft, FileSpreadsheet, Plus, Search, Trash2, UserMinus } from 'lucide-react'
+import { ArrowRightLeft, Download, FileSpreadsheet, Plus, Search, Trash2, UserMinus } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ApiError, api } from '../api'
+import { ApiError, api, downloadFile } from '../api'
 import { Dialog, EmptyState, ErrorState } from '../components/ui'
 import { useToast } from '../components/toast'
 import { refreshResidentData, residentQueryKeys, sharedResidentQueryOptions } from '../residentData'
@@ -19,6 +19,7 @@ export function ResidentManagementPage({ user }: { user: CurrentUser }) {
   const [editing, setEditing] = useState<ManagedDormResident | null>(null)
   const [transferring, setTransferring] = useState<ManagedDormResident | null>(null)
   const [clearing, setClearing] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const residents = useQuery({ queryKey: residentQueryKeys.residents, queryFn: ({ signal }) => api<ManagedDormResident[]>('/api/residents', {}, signal), ...sharedResidentQueryOptions })
   const rooms = useQuery({ queryKey: residentQueryKeys.rooms, queryFn: ({ signal }) => api<DormRoomOption[]>('/api/residents/rooms', {}, signal), ...sharedResidentQueryOptions })
   const queryClient = useQueryClient()
@@ -44,9 +45,20 @@ export function ResidentManagementPage({ user }: { user: CurrentUser }) {
   const canImport = user.role === 'Admin' || user.role === 'DeanOfStudents' || user.role === 'AssistantDirectorOfResidenceLife'
   const canClearRoster = user.role === 'Admin' || user.role === 'DeanOfStudents' || user.role === 'AssistantDirectorOfResidenceLife' || user.role === 'HallDirector'
   const residentCount = residents.data?.length ?? 0
+  async function exportResidents() {
+    setExporting(true)
+    try {
+      const hallSlug = hallName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      await downloadFile('/api/residents/export', `${hallSlug}-residents.xlsx`)
+    } catch (error) {
+      toast(error instanceof ApiError ? error.problem.title : 'The resident spreadsheet could not be downloaded.', 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return <div className="page resident-management-page">
-    <header className="resident-management-heading"><div><span className="eyebrow">{hallName}</span><h1>Residents</h1><p>Add residents, correct their information, or move them when room assignments change.</p></div><div className="resident-heading-actions">{canImport && <Link className="button button--quiet" to="/admin/residents"><FileSpreadsheet size={17} />Import Excel</Link>}{canClearRoster && <button type="button" className="button button--danger-quiet" onClick={() => setClearing(true)} disabled={!residentCount}><Trash2 size={17} />Clear residents</button>}<button type="button" className="button button--primary" onClick={() => setCreating(true)}><Plus size={17} />Add resident</button></div></header>
+    <header className="resident-management-heading"><div><span className="eyebrow">{hallName}</span><h1>Residents</h1><p>Add residents, correct their information, or move them when room assignments change.</p></div><div className="resident-heading-actions"><button type="button" className="button button--quiet" onClick={exportResidents} disabled={!residentCount || exporting}><Download size={17} />{exporting ? 'Exporting…' : 'Export Excel'}</button>{canImport && <Link className="button button--quiet" to="/admin/residents"><FileSpreadsheet size={17} />Import Excel</Link>}{canClearRoster && <button type="button" className="button button--danger-quiet" onClick={() => setClearing(true)} disabled={!residentCount}><Trash2 size={17} />Clear residents</button>}<button type="button" className="button button--primary" onClick={() => setCreating(true)}><Plus size={17} />Add resident</button></div></header>
 
     <div className="resident-toolbar"><label className="search-field"><Search size={18} /><span className="sr-only">Search residents</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, room, or activity" /></label><span>{visible.length} of {residents.data?.length ?? 0} residents</span></div>
     {residents.isLoading && <div className="resident-list-skeleton"><div className="skeleton skeleton--title" />{Array.from({ length: 6 }, (_, index) => <div className="skeleton skeleton--cell" key={index} />)}</div>}

@@ -81,7 +81,7 @@ export async function signOut(): Promise<void> {
   finally { resetCsrfToken() }
 }
 
-export async function downloadPdf(path: string, filename: string): Promise<void> {
+export async function downloadFile(path: string, filename: string): Promise<void> {
   const headers = new Headers()
   const hallId = activeHallId()
   if (hallId) headers.set('X-Active-Residence-Hall', hallId)
@@ -97,3 +97,5 @@ export async function downloadPdf(path: string, filename: string): Promise<void>
   link.href = url; link.download = filename; link.click()
   URL.revokeObjectURL(url)
 }
+
+export const downloadPdf = downloadFile

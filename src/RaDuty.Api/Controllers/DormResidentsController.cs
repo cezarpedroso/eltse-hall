@@ -5,8 +5,16 @@ using RaDuty.Application;
 namespace RaDuty.Api.Controllers;
 
 [ApiController, Route("api/residents"), Authorize(Policy = "ResidentAssistantOrDirector")]
-public sealed class DormResidentsController(IDormResidentManagementService residents) : ControllerBase
+public sealed class DormResidentsController(IDormResidentManagementService residents, IResidentRosterExportService rosterExport) : ControllerBase
 {
+    [HttpGet("export")]
+    public async Task<IActionResult> Export(CancellationToken cancellationToken)
+    {
+        var workbook = await rosterExport.ExportAsync(cancellationToken);
+        Response.Headers.CacheControl = "no-store";
+        return File(workbook.Content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", workbook.FileName);
+    }
+
     [HttpGet]
     public Task<IReadOnlyList<ManagedDormResidentDto>> Get([FromQuery] string? search, CancellationToken cancellationToken) =>
         residents.GetAsync(search, cancellationToken);
